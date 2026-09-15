@@ -1,0 +1,101 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+:root {
+  --background: #f3f5f4;
+  --surface: #ffffff;
+  --surface-muted: #eef1f0;
+  --border: rgba(20, 24, 22, 0.08);
+  --foreground: #14181a;
+  --muted-foreground: #5b655f;
+
+  --accent-from: #10b981;
+  --accent-to: #2dd4bf;
+  --accent: var(--accent-to);
+  --accent-foreground: #ffffff;
+  --accent-soft: rgba(16, 185, 129, 0.12);
+
+  --danger: #e11d48;
+  --danger-soft: rgba(225, 29, 72, 0.1);
+  --danger-foreground: #ffffff;
+
+  --glow: rgba(16, 185, 129, 0.05);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0d0c;
+    --surface: #141917;
+    --surface-muted: #1b211f;
+    --border: rgba(255, 255, 255, 0.08);
+    --foreground: #f4f7f6;
+    --muted-foreground: #8b968f;
+
+    --accent-soft: rgba(45, 212, 191, 0.16);
+    --danger-soft: rgba(225, 29, 72, 0.18);
+
+    --glow: rgba(45, 212, 191, 0.14);
+  }
+}
+
+[data-theme="dark"] {
+  --background: #0a0d0c;
+  --surface: #141917;
+  --surface-muted: #1b211f;
+  --border: rgba(255, 255, 255, 0.08);
+  --foreground: #f4f7f6;
+  --muted-foreground: #8b968f;
+
+  --accent-soft: rgba(45, 212, 191, 0.16);
+  --danger-soft: rgba(225, 29, 72, 0.18);
+
+  --glow: rgba(45, 212, 191, 0.14);
+}
+
+[data-theme="light"] {
+  --background: #f3f5f4;
+  --surface: #ffffff;
+  --surface-muted: #eef1f0;
+  --border: rgba(20, 24, 22, 0.08);
+  --foreground: #14181a;
+  --muted-foreground: #5b655f;
+
+  --accent-soft: rgba(16, 185, 129, 0.12);
+  --danger-soft: rgba(225, 29, 72, 0.1);
+
+  --glow: rgba(16, 185, 129, 0.05);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-border: var(--border);
+  --color-foreground: var(--foreground);
+  --color-muted-foreground: var(--muted-foreground);
+
+  --color-accent-from: var(--accent-from);
+  --color-accent-to: var(--accent-to);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent-soft: var(--accent-soft);
+
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-foreground: var(--danger-foreground);
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  min-height: 100dvh;
+  background-color: var(--background);
+  background-image: radial-gradient(700px circle at 15% -10%, var(--glow), transparent 60%),
+    radial-gradient(600px circle at 105% 15%, var(--glow), transparent 60%);
+  background-attachment: fixed;
+  color: var(--foreground);
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
