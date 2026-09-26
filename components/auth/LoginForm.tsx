@@ -70,7 +70,7 @@ export function LoginForm({ next }: { next: string }) {
           />
         </div>
 
-        <label className="flex w-fit cursor-pointer items-center gap-2 text-sm text-foreground">
+        <label className="flex w-fit items-center gap-2 text-sm text-foreground">
           <input
             type="checkbox"
             checked={remember}

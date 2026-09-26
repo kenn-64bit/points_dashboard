@@ -56,17 +56,23 @@ export function getWeeksBetween(weekA: string, weekB: string): string[] {
 
 // e.g. "Sep 7 - 13, 2026" (same month) or "Sep 28 - Oct 4, 2026" (spans months).
 export function formatWeekRange(mondayStr: string): string {
-  const monday = new Date(`${mondayStr}T00:00:00Z`);
-  if (Number.isNaN(monday.getTime())) return mondayStr;
-  const sunday = new Date(monday);
+  return formatWeeksSpan(mondayStr, mondayStr);
+}
+
+// Monday of the first week through Sunday of the last, in formatWeekRange's style.
+export function formatWeeksSpan(firstMondayStr: string, lastMondayStr: string): string {
+  const monday = new Date(`${firstMondayStr}T00:00:00Z`);
+  const sunday = new Date(`${lastMondayStr}T00:00:00Z`);
+  if (Number.isNaN(monday.getTime()) || Number.isNaN(sunday.getTime())) return firstMondayStr;
   sunday.setUTCDate(sunday.getUTCDate() + 6);
 
   const month = (d: Date) => d.toLocaleDateString("en-US", { month: "short", timeZone: "UTC" });
   const day = (d: Date) => d.toLocaleDateString("en-US", { day: "numeric", timeZone: "UTC" });
-  const year = sunday.toLocaleDateString("en-US", { year: "numeric", timeZone: "UTC" });
+  const year = (d: Date) => d.toLocaleDateString("en-US", { year: "numeric", timeZone: "UTC" });
 
-  const sameMonth = month(monday) === month(sunday);
-  const start = `${month(monday)} ${day(monday)}`;
+  const sameYear = year(monday) === year(sunday);
+  const sameMonth = sameYear && month(monday) === month(sunday);
+  const start = `${month(monday)} ${day(monday)}${sameYear ? "" : `, ${year(monday)}`}`;
   const end = sameMonth ? day(sunday) : `${month(sunday)} ${day(sunday)}`;
-  return `${start} - ${end}, ${year}`;
+  return `${start} - ${end}, ${year(sunday)}`;
 }

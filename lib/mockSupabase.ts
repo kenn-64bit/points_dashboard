@@ -11,6 +11,8 @@ import { DAY_COLUMNS } from "@/types";
 interface MockEvent {
   event_id: string;
   event_name: string;
+  event_type: string;
+  description: string | null;
   created_at: string;
   month: string;
 }
@@ -85,7 +87,7 @@ type Op =
   | { kind: "select" }
   | { kind: "insert"; payload: Row | Row[] }
   | { kind: "update"; payload: Row }
-  | { kind: "upsert"; payload: Row | Row[]; onConflict?: string }
+  | { kind: "upsert"; payload: Row | Row[]; onConflict?: string; ignoreDuplicates?: boolean }
   | { kind: "delete" };
 
 class MockQueryBuilder<T extends Row> implements PromiseLike<{ data: unknown; error: { message: string } | null }> {
@@ -127,8 +129,8 @@ class MockQueryBuilder<T extends Row> implements PromiseLike<{ data: unknown; er
     this.op = { kind: "update", payload };
     return this;
   }
-  upsert(payload: Row | Row[], opts?: { onConflict?: string }) {
-    this.op = { kind: "upsert", payload, onConflict: opts?.onConflict };
+  upsert(payload: Row | Row[], opts?: { onConflict?: string; ignoreDuplicates?: boolean }) {
+    this.op = { kind: "upsert", payload, onConflict: opts?.onConflict, ignoreDuplicates: opts?.ignoreDuplicates };
     return this;
   }
   delete() {
@@ -190,6 +192,8 @@ class MockQueryBuilder<T extends Row> implements PromiseLike<{ data: unknown; er
       return {
         event_id: (payload.event_id as string) ?? crypto.randomUUID(),
         event_name: payload.event_name,
+        event_type: payload.event_type ?? "other",
+        description: payload.description ?? null,
         created_at,
         month: created_at.slice(0, 7),
       };
@@ -258,7 +262,7 @@ class MockQueryBuilder<T extends Row> implements PromiseLike<{ data: unknown; er
       }
 
       if (this.op.kind === "upsert") {
-        const { payload, onConflict } = this.op;
+        const { payload, onConflict, ignoreDuplicates } = this.op;
         const payloads = Array.isArray(payload) ? payload : [payload];
         const keyCols = (onConflict ?? "")
           .split(",")
@@ -268,6 +272,9 @@ class MockQueryBuilder<T extends Row> implements PromiseLike<{ data: unknown; er
         for (const p of payloads) {
           const match = rows.find((r) => keyCols.length > 0 && keyCols.every((c) => (r as Row)[c] === p[c]));
           if (match) {
+            // Mirrors Supabase's ON CONFLICT DO NOTHING: the existing row is left
+            // untouched and omitted from the returned rows.
+            if (ignoreDuplicates) continue;
             Object.assign(match as Row, p);
             this.recompute(match as Row);
             results.push(match as Row);

@@ -42,6 +42,21 @@
 
   --overlay: rgba(59, 47, 31, 0.4);
   --shadow: rgba(90, 74, 50, 0.12);
+
+  /* Event pass cards, one pastel per event type. `-ink` is the text and
+     decoration on that card (all pairs ≥ 6:1). */
+  --pass-game-night: #cde8c1;
+  --pass-game-night-ink: #2e5a2b;
+  --pass-tournament: #c9dff3;
+  --pass-tournament-ink: #234a70;
+  --pass-challenge: #f9d9b3;
+  --pass-challenge-ink: #7a3d0a;
+  --pass-giveaway: #f7d0dc;
+  --pass-giveaway-ink: #7d2745;
+  --pass-community: #ddd3f2;
+  --pass-community-ink: #4b3a80;
+  --pass-other: #ebe2c6;
+  --pass-other-ink: #5a4a32;
 }
 
 /* Island Night */
@@ -77,6 +92,19 @@
 
   --overlay: rgba(5, 8, 18, 0.6);
   --shadow: rgba(0, 0, 0, 0.35);
+
+  --pass-game-night: #2d4a36;
+  --pass-game-night-ink: #c9ecbd;
+  --pass-tournament: #2b4262;
+  --pass-tournament-ink: #c6ddf5;
+  --pass-challenge: #54402a;
+  --pass-challenge-ink: #f8d6ae;
+  --pass-giveaway: #52324a;
+  --pass-giveaway-ink: #f6cddb;
+  --pass-community: #3d3664;
+  --pass-community-ink: #dcd2f5;
+  --pass-other: #3f3a33;
+  --pass-other-ink: #ece2c6;
 }
 
 @theme inline {
@@ -108,6 +136,19 @@
   --color-danger-soft: var(--danger-soft);
 
   --color-overlay: var(--overlay);
+
+  --color-pass-game-night: var(--pass-game-night);
+  --color-pass-game-night-ink: var(--pass-game-night-ink);
+  --color-pass-tournament: var(--pass-tournament);
+  --color-pass-tournament-ink: var(--pass-tournament-ink);
+  --color-pass-challenge: var(--pass-challenge);
+  --color-pass-challenge-ink: var(--pass-challenge-ink);
+  --color-pass-giveaway: var(--pass-giveaway);
+  --color-pass-giveaway-ink: var(--pass-giveaway-ink);
+  --color-pass-community: var(--pass-community);
+  --color-pass-community-ink: var(--pass-community-ink);
+  --color-pass-other: var(--pass-other);
+  --color-pass-other-ink: var(--pass-other-ink);
 
   --radius-panel: 1.75rem;
   --radius-field: 1rem;
@@ -144,6 +185,40 @@
   input[type="number"]::-webkit-outer-spin-button {
     appearance: none;
     margin: 0;
+  }
+}
+
+/* Island glove cursors (public/cursors/). Mouse/trackpad only; every rule
+   falls back to the native cursor. Base layer, so utilities such as
+   `cursor-not-allowed` still win. Hotspot is the fingertip (grab: center). */
+@layer base {
+  @media (pointer: fine) {
+    html {
+      cursor: url("/cursors/point.png") 10 1, auto;
+    }
+    a,
+    button,
+    [role="button"],
+    [role="switch"],
+    summary,
+    select,
+    label[for],
+    label:has(input[type="checkbox"]),
+    input[type="checkbox"],
+    input[type="file"]::file-selector-button {
+      cursor: url("/cursors/tap.png") 9 1, pointer;
+    }
+    :is(a, button, [role="button"], [role="switch"]):active {
+      cursor: url("/cursors/grab.png") 16 16, grabbing;
+    }
+    input:not([type="checkbox"]):not([type="file"]),
+    textarea {
+      cursor: text;
+    }
+    :disabled,
+    [aria-disabled="true"] {
+      cursor: not-allowed;
+    }
   }
 }
 

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { errorResponse, unauthorizedResponse } from "@/lib/apiError";
 import { getCurrentUser } from "@/lib/auth/dal";
-import { isValidUUID, MAX_EVENT_NAME_LENGTH } from "@/lib/validation";
+import { isValidUUID, parseEventInput } from "@/lib/validation";
 
 type Params = { params: Promise<{ eventId: string }> };
 
@@ -29,19 +29,13 @@ export async function PUT(request: NextRequest, { params }: Params) {
     const { eventId } = await params;
     if (!isValidUUID(eventId)) return NextResponse.json({ error: "Invalid event id" }, { status: 400 });
 
-    const body = await request.json();
-    const event_name = typeof body.event_name === "string" ? body.event_name.trim() : "";
-    if (!event_name) {
-      return NextResponse.json({ error: "event_name is required" }, { status: 400 });
-    }
-    if (event_name.length > MAX_EVENT_NAME_LENGTH) {
-      return NextResponse.json({ error: `event_name must be ${MAX_EVENT_NAME_LENGTH} characters or fewer` }, { status: 400 });
-    }
+    const parsed = parseEventInput(await request.json());
+    if ("error" in parsed) return NextResponse.json({ error: parsed.error }, { status: 400 });
 
     const supabase = getSupabaseAdmin();
     const { data, error } = await supabase
       .from("events")
-      .update({ event_name })
+      .update(parsed.data)
       .eq("event_id", eventId)
       .select("*")
       .maybeSingle();

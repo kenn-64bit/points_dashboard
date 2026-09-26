@@ -107,7 +107,7 @@ export function BulkImportButton({
                 accept={ALLOWED_IMPORT_EXTENSIONS.join(",")}
                 onChange={handleFileChange}
                 aria-label="File to import"
-                className={`mt-4 ${inputClasses} file:mr-3 file:cursor-pointer file:rounded-full file:border-0 file:bg-primary-soft file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-foreground`}
+                className={`mt-4 ${inputClasses} file:mr-3 file:rounded-full file:border-0 file:bg-primary-soft file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-foreground`}
               />
               <div className="mt-6 flex justify-end gap-2">
                 <Button variant="ghost" onClick={closeModal} disabled={submitting}>

@@ -35,11 +35,31 @@ export interface User {
   created_at: string;
 }
 
+export const EVENT_TYPES = ["game_night", "tournament", "challenge", "giveaway", "community", "other"] as const;
+
+export type EventType = (typeof EVENT_TYPES)[number];
+
+export const EVENT_TYPE_LABELS: Record<EventType, string> = {
+  game_night: "Game Night",
+  tournament: "Tournament",
+  challenge: "Challenge",
+  giveaway: "Giveaway",
+  community: "Community",
+  other: "Other",
+};
+
 export interface Event {
   event_id: string;
   event_name: string;
+  event_type: EventType;
+  description: string | null;
   created_at: string;
   month: string;
+}
+
+export interface EventSummary {
+  weeks: string[]; // Mondays with at least one points row, oldest first
+  participant_count: number;
 }
 
 export interface PointsRow extends DayValues {

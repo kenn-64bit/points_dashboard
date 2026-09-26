@@ -13,10 +13,14 @@ create table users (
 );
 
 create table events (
-  event_id   uuid primary key default gen_random_uuid(),
-  event_name text not null,
-  created_at timestamptz not null default now(),
-  month      text generated always as (to_char(created_at, 'YYYY-MM')) stored
+  event_id    uuid primary key default gen_random_uuid(),
+  event_name  text not null,
+  -- Keep in sync with EVENT_TYPES in types/index.ts.
+  event_type  text not null default 'other'
+    check (event_type in ('game_night', 'tournament', 'challenge', 'giveaway', 'community', 'other')),
+  description text check (char_length(description) <= 500),
+  created_at  timestamptz not null default now(),
+  month       text generated always as (to_char(created_at, 'YYYY-MM')) stored
 );
 create index idx_events_month on events (month);
 
@@ -76,3 +80,11 @@ alter table app_users enable row level security;
 -- All access is mediated by this app's own API routes, which require a signed-in
 -- roster member and use the service-role key server-side — the browser never
 -- talks to Supabase directly.
+
+-- Migration for projects created before events had a type and description
+-- (2026-09-27). Safe to run once on an existing database:
+--
+--   alter table events
+--     add column event_type text not null default 'other'
+--       check (event_type in ('game_night', 'tournament', 'challenge', 'giveaway', 'community', 'other')),
+--     add column description text check (char_length(description) <= 500);

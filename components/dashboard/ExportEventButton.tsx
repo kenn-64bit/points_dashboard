@@ -26,12 +26,12 @@ export function ExportEventButton({ eventId, weeks }: { eventId: string; weeks: 
   return (
     <>
       <Button variant="secondary" onClick={() => setOpen(true)}>
-        Export CSV
+        Export Event Data
       </Button>
 
       {open && (
         <Modal maxWidth="max-w-md">
-          <h3 className="text-lg font-extrabold text-foreground">Export CSV</h3>
+          <h3 className="text-lg font-extrabold text-foreground">Export Event Data</h3>
 
           {weeks.length === 0 ? (
             <>

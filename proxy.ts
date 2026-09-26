@@ -3,7 +3,7 @@ import { apiRateLimit, mutationRateLimit, bulkImportRateLimit, loginRateLimit } 
 import { SESSION_COOKIE, verifySession } from "@/lib/auth/session";
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|cursors/).*)"],
 };
 
 const PUBLIC_PATHS = new Set(["/login", "/api/auth/login", "/api/auth/logout"]);

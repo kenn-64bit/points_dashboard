@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { WeekSelector } from "@/components/dashboard/WeekSelector";
 import { PointsTable } from "@/components/dashboard/PointsTable";
 import { BulkImportButton } from "@/components/dashboard/BulkImportButton";
+import { AddParticipantsButton } from "@/components/dashboard/AddParticipantsButton";
 import { Loading } from "@/components/common/Loading";
 import { ErrorState } from "@/components/common/ErrorState";
 import { formatWeekRange, getCurrentWeekMonday } from "@/lib/week";
@@ -43,7 +44,10 @@ export function EventWorkspace({ eventId }: { eventId: string }) {
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <WeekSelector eventId={eventId} selectedWeek={week} onChange={setWeek} />
-        <BulkImportButton eventId={eventId} week={week} onImported={loadPoints} />
+        <div className="flex flex-wrap items-center gap-2">
+          <AddParticipantsButton eventId={eventId} week={week} onAdded={loadPoints} />
+          <BulkImportButton eventId={eventId} week={week} onImported={loadPoints} />
+        </div>
       </div>
       {error && <ErrorState message={error} onRetry={loadPoints} />}
       {!error && rows === null && <Loading label="Loading points…" />}
