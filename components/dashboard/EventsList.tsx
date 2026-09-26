@@ -4,24 +4,14 @@ import Link from "next/link";
 import { useState } from "react";
 import type { Event } from "@/types";
 import { CreateEventButton } from "@/components/dashboard/CreateEventButton";
+import { Panel } from "@/components/common/Panel";
+import { Badge } from "@/components/common/Badge";
+import { ChevronDownIcon } from "@/components/common/Select";
 
 function formatMonthLabel(month: string): string {
   const parsed = new Date(`${month}-01T00:00:00Z`);
   if (Number.isNaN(parsed.getTime())) return month;
   return parsed.toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
-}
-
-function ChevronIcon({ open }: { open: boolean }) {
-  return (
-    <svg
-      viewBox="0 0 16 16"
-      fill="none"
-      aria-hidden
-      className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`}
-    >
-      <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
 }
 
 export function EventsList({ events }: { events: Event[] }) {
@@ -45,39 +35,41 @@ export function EventsList({ events }: { events: Event[] }) {
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-border divide-y divide-border">
+    <Panel
+      label={`${events.length} ${events.length === 1 ? "event" : "events"}`}
+      bodyClassName="divide-y divide-border"
+    >
       {events.length === 0 && (
-        <p className="px-4 py-3 text-sm text-muted-foreground">No events yet — create one below.</p>
+        <p className="px-5 py-4 text-sm text-muted-foreground">No events yet — create one below.</p>
       )}
       {months.map((month) => {
         const isOpen = !collapsed.has(month);
         const monthEvents = groups.get(month)!;
         return (
-          <div key={month} className={isOpen ? "divide-y divide-border" : ""}>
+          <div key={month} className={isOpen ? "divide-y divide-dashed divide-line" : ""}>
             <button
               type="button"
               onClick={() => toggleMonth(month)}
-              className="flex w-full items-center justify-between bg-surface-muted px-4 py-3 text-left text-lg font-semibold text-foreground transition-colors hover:bg-accent-soft"
+              aria-expanded={isOpen}
+              className="flex w-full items-center justify-between bg-surface-muted px-5 py-3 text-left text-lg font-extrabold text-foreground transition-colors hover:bg-accent-soft"
             >
               <span className="flex items-center gap-2.5">
                 {formatMonthLabel(month)}
-                <span className="rounded-full bg-surface px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                  {monthEvents.length}
-                </span>
+                <Badge className="bg-surface py-0.5 text-muted-foreground">{monthEvents.length}</Badge>
               </span>
-              <ChevronIcon open={isOpen} />
+              <ChevronDownIcon open={isOpen} />
             </button>
             {isOpen &&
               monthEvents.map((event) => (
                 <Link
                   key={event.event_id}
                   href={`/dashboard/events/${event.event_id}`}
-                  className="flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-accent-soft"
+                  className="group flex items-center justify-between gap-4 px-5 py-3 transition-colors hover:bg-accent-soft"
                 >
-                  <span className="font-medium text-foreground">{event.event_name}</span>
+                  <span className="font-bold text-foreground group-hover:text-accent-ink">{event.event_name}</span>
                   <span
                     aria-hidden
-                    className="flex h-6 w-6 items-center justify-center rounded-full bg-surface-muted text-muted-foreground"
+                    className="flex h-6 w-6 items-center justify-center rounded-full bg-surface-muted font-bold text-muted-foreground transition-transform duration-150 group-hover:translate-x-0.5"
                   >
                     ›
                   </span>
@@ -87,6 +79,6 @@ export function EventsList({ events }: { events: Event[] }) {
         );
       })}
       <CreateEventButton variant="row" />
-    </div>
+    </Panel>
   );
 }

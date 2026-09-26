@@ -1,10 +1,11 @@
-type Tone = "neutral" | "accent" | "danger" | "inverse";
+type Tone = "neutral" | "accent" | "primary" | "total" | "danger";
 
 const TONE_CLASSES: Record<Tone, string> = {
   neutral: "bg-surface-muted text-foreground",
-  accent: "bg-gradient-to-br from-accent-from to-accent-to text-accent-foreground",
+  accent: "bg-accent text-accent-foreground",
+  primary: "bg-primary-soft text-foreground",
+  total: "bg-total text-total-foreground",
   danger: "bg-danger-soft text-danger",
-  inverse: "bg-foreground text-background",
 };
 
 export function Badge({
@@ -18,7 +19,7 @@ export function Badge({
 }) {
   return (
     <span
-      className={`inline-flex items-center justify-center rounded-full px-2.5 py-1 text-xs font-semibold tabular-nums ${TONE_CLASSES[tone]} ${className}`}
+      className={`inline-flex items-center justify-center rounded-full px-2.5 py-1 text-xs font-bold tabular-nums ${TONE_CLASSES[tone]} ${className}`}
     >
       {children}
     </span>

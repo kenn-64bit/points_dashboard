@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useSyncExternalStore } from "react";
 
 type Theme = "light" | "dark";
 
@@ -8,6 +8,8 @@ interface ThemeContextValue {
   theme: Theme;
   toggleTheme: () => void;
 }
+
+const STORAGE_KEY = "theme";
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
@@ -17,42 +19,67 @@ export function useTheme(): ThemeContextValue {
   return ctx;
 }
 
+function readStoredTheme(): Theme | null {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    return stored === "light" || stored === "dark" ? stored : null;
+  } catch {
+    return null;
+  }
+}
+
+// The `data-theme` attribute on <html> is the source of truth: the blocking
+// THEME_INIT_SCRIPT sets it before first paint, and React just subscribes to
+// it. The server has no DOM, so it renders the light default; React then
+// re-reads the real value during hydration without a mismatch or flash.
+function getSnapshot(): Theme {
+  return document.documentElement.dataset.theme === "dark" ? "dark" : "light";
+}
+
+function getServerSnapshot(): Theme {
+  return "light";
+}
+
+function subscribe(onChange: () => void): () => void {
+  const observer = new MutationObserver(onChange);
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+  // Until the user explicitly picks a theme, keep following the OS setting.
+  const media = window.matchMedia("(prefers-color-scheme: dark)");
+  function handleSystemChange(e: MediaQueryListEvent) {
+    if (!readStoredTheme()) document.documentElement.dataset.theme = e.matches ? "dark" : "light";
+  }
+  media.addEventListener("change", handleSystemChange);
+
+  return () => {
+    observer.disconnect();
+    media.removeEventListener("change", handleSystemChange);
+  };
+}
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  // Always starts as "dark" to match the server-rendered markup (there is no
-  // `document` on the server) — the blocking THEME_INIT_SCRIPT has already
-  // set the real data-theme attribute before this ever paints, and the
-  // effect below reads it back into state without re-writing the attribute
-  // on that first sync, so this never causes a hydration mismatch or flash.
-  const [theme, setTheme] = useState<Theme>("dark");
-  const skipNextWrite = useRef(true);
-
-  useEffect(() => {
-    const attr = document.documentElement.dataset.theme;
-    if (attr === "light" || attr === "dark") setTheme(attr);
-  }, []);
-
-  useEffect(() => {
-    if (skipNextWrite.current) {
-      skipNextWrite.current = false;
-      return;
-    }
-    document.documentElement.dataset.theme = theme;
-  }, [theme]);
+  const theme = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
   const toggleTheme = useCallback(() => {
-    setTheme((prev) => {
-      const next = prev === "dark" ? "light" : "dark";
-      try {
-        localStorage.setItem("theme", next);
-      } catch {
-        // localStorage may be unavailable (private browsing); theme still
-        // applies for the current session via the data-theme attribute.
-      }
-      return next;
-    });
+    const next: Theme = getSnapshot() === "dark" ? "light" : "dark";
+    try {
+      localStorage.setItem(STORAGE_KEY, next);
+    } catch {
+      // localStorage may be unavailable (private browsing); theme still
+      // applies for the current session via the data-theme attribute.
+    }
+    const apply = () => {
+      document.documentElement.dataset.theme = next;
+    };
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (typeof document.startViewTransition !== "function" || reduceMotion) {
+      apply();
+      return;
+    }
+    document.startViewTransition(apply);
   }, []);
 
   return <ThemeContext.Provider value={{ theme, toggleTheme }}>{children}</ThemeContext.Provider>;
 }
 
-export const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem("theme");if(t!=="light"&&t!=="dark"){t=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";}document.documentElement.dataset.theme=t;}catch(e){}})();`;
+export const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem("${STORAGE_KEY}");if(t!=="light"&&t!=="dark"){t=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";}document.documentElement.dataset.theme=t;}catch(e){document.documentElement.dataset.theme="light";}})();`;

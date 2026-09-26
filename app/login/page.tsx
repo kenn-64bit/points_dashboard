@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/dal";
 import { LoginForm } from "@/components/auth/LoginForm";
+import { ThemeToggle } from "@/components/common/ThemeToggle";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +25,10 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   if (await getCurrentUser()) redirect(next);
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-sm flex-col justify-center px-4 py-16">
+    <div className="mx-auto flex min-h-dvh w-full max-w-sm flex-col justify-center px-4 py-16">
+      <div className="fixed right-4 top-4 z-30 sm:right-6">
+        <ThemeToggle />
+      </div>
       <LoginForm next={next} />
     </div>
   );

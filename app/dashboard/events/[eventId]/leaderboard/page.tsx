@@ -34,11 +34,11 @@ export default async function LeaderboardPage({ params }: { params: Promise<{ ev
   const result = await loadLeaderboard(eventId);
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
+    <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6">
       <Link href={`/dashboard/events/${eventId}`} className={buttonClasses("ghost", "mb-4")}>
         ← Back to event
       </Link>
-      <h1 className="mb-6 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Leaderboard</h1>
+      <h1 className="mb-6 text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">Leaderboard</h1>
       {"error" in result ? <ErrorState message={result.error} /> : <Leaderboard rows={result.leaderboard} />}
     </div>
   );

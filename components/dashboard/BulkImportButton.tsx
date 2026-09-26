@@ -6,6 +6,7 @@ import { useToast } from "@/components/common/Toast";
 import { Modal } from "@/components/common/Modal";
 import { Button } from "@/components/common/Button";
 import { Badge } from "@/components/common/Badge";
+import { inputClasses } from "@/components/common/Field";
 import { hasAllowedExtension, isWithinMaxSize, ALLOWED_IMPORT_EXTENSIONS } from "@/lib/validation";
 import { formatWeekRange } from "@/lib/week";
 import type { BulkImportResult } from "@/types";
@@ -92,9 +93,9 @@ export function BulkImportButton({
 
       {open && (
         <Modal maxWidth="max-w-lg">
-          <h3 className="text-base font-semibold text-foreground">Import Users &amp; Points</h3>
+          <h3 className="text-lg font-extrabold text-foreground">Import Users &amp; Points</h3>
           <p className="mt-1 text-sm text-muted-foreground">
-            Upload a .csv or .xlsx file for <span className="font-medium text-foreground">{formatWeekRange(week)}</span>.
+            Upload a .csv or .xlsx file for <span className="font-bold text-foreground">{formatWeekRange(week)}</span>.
             New usernames are created automatically.
           </p>
 
@@ -105,7 +106,8 @@ export function BulkImportButton({
                 type="file"
                 accept={ALLOWED_IMPORT_EXTENSIONS.join(",")}
                 onChange={handleFileChange}
-                className="mt-4 w-full rounded-2xl border border-border bg-surface-muted px-3.5 py-2.5 text-sm text-foreground outline-none file:mr-3 file:rounded-full file:border-0 file:bg-accent-soft file:px-3 file:py-1.5 file:text-xs file:font-medium"
+                aria-label="File to import"
+                className={`mt-4 ${inputClasses} file:mr-3 file:cursor-pointer file:rounded-full file:border-0 file:bg-primary-soft file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-foreground`}
               />
               <div className="mt-6 flex justify-end gap-2">
                 <Button variant="ghost" onClick={closeModal} disabled={submitting}>
@@ -121,18 +123,15 @@ export function BulkImportButton({
           {result && (
             <>
               <div className="mt-4 flex flex-wrap gap-2">
-                <Badge tone="accent">{result.imported} imported</Badge>
+                <Badge tone="primary">{result.imported} imported</Badge>
                 <Badge tone="neutral">{result.created_users} new users</Badge>
                 <Badge tone="neutral">{result.updated_users} points saved</Badge>
                 {result.failed > 0 && <Badge tone="danger">{result.failed} failed</Badge>}
               </div>
               {result.errors.length > 0 && (
-                <div className="mt-3 max-h-48 overflow-y-auto rounded-2xl border border-border">
+                <div className="mt-3 max-h-48 divide-y divide-dashed divide-line overflow-y-auto rounded-field border border-border bg-surface-muted">
                   {result.errors.map((e, i) => (
-                    <div
-                      key={i}
-                      className="border-b border-border px-3.5 py-2 text-xs text-muted-foreground last:border-b-0"
-                    >
+                    <div key={i} className="px-3.5 py-2 text-xs text-muted-foreground">
                       Row {e.row}: {e.message}
                     </div>
                   ))}

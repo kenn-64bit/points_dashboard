@@ -8,7 +8,8 @@ import { useToast } from "@/components/common/Toast";
 import { formatWeekRange } from "@/lib/week";
 import { Modal } from "@/components/common/Modal";
 import { Button } from "@/components/common/Button";
-import { Badge } from "@/components/common/Badge";
+import { TotalTile } from "@/components/common/TotalTile";
+import { KeyValueRow } from "@/components/common/KeyValueRow";
 
 type Phase = "edit" | "confirm";
 
@@ -68,23 +69,21 @@ export function PointsEditorModal({
 
   return (
     <Modal maxWidth="max-w-xl">
-      <div className="mb-4 flex items-start justify-between gap-4">
-        <h3 className="text-lg font-semibold text-foreground">{row.discord_username}</h3>
-        <div className="flex flex-col items-end gap-1">
-          <Badge tone="accent" className="px-3 py-1 text-sm">
-            {total}
-          </Badge>
-          <div className="text-xs text-muted-foreground">Total</div>
+      <div className="mb-5 flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <h3 className="truncate text-lg font-extrabold text-foreground">{row.discord_username}</h3>
+          <p className="text-sm text-muted-foreground">{formatWeekRange(row.week_date)}</p>
         </div>
+        <TotalTile value={total} />
       </div>
 
       {phase === "edit" && (
         <>
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {DAY_COLUMNS.map((day) => (
-              <div key={day} className="flex flex-col items-center gap-1.5 text-xs text-muted-foreground">
+              <div key={day} className="flex flex-col items-center gap-1.5 text-xs font-bold text-muted-foreground">
                 {DAY_LABELS[day]}
-                <div className="flex h-16 w-24 overflow-hidden rounded-2xl border border-border">
+                <div className="flex h-16 w-24 overflow-hidden rounded-field border border-border">
                   <input
                     type="number"
                     min={0}
@@ -99,13 +98,14 @@ export function PointsEditorModal({
                       e.target.value = String(normalized);
                       setValues((prev) => ({ ...prev, [day]: normalized }));
                     }}
-                    className="w-16 [appearance:textfield] bg-surface-muted text-center text-2xl font-bold text-foreground outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                    aria-label={`${DAY_LABELS[day]} points`}
+                    className="w-16 bg-surface-muted text-center text-2xl font-extrabold tabular-nums text-foreground outline-none focus:bg-primary-soft"
                   />
                   <div className="flex w-8 flex-col">
                     <button
                       type="button"
                       onClick={() => adjust(day, 1)}
-                      className="flex flex-1 items-center justify-center bg-gradient-to-br from-accent-from to-accent-to text-accent-foreground hover:brightness-110"
+                      className="flex flex-1 items-center justify-center bg-primary text-primary-foreground transition-[filter] hover:brightness-110"
                       aria-label={`Increase ${DAY_LABELS[day]}`}
                     >
                       <span className="text-base font-bold leading-none">+</span>
@@ -113,7 +113,7 @@ export function PointsEditorModal({
                     <button
                       type="button"
                       onClick={() => adjust(day, -1)}
-                      className="flex flex-1 items-center justify-center bg-danger-soft text-danger hover:brightness-95"
+                      className="flex flex-1 items-center justify-center bg-danger-soft text-danger transition-colors hover:bg-danger hover:text-danger-foreground"
                       aria-label={`Decrease ${DAY_LABELS[day]}`}
                     >
                       <span className="text-base font-bold leading-none">−</span>
@@ -137,19 +137,15 @@ export function PointsEditorModal({
       {phase === "confirm" && (
         <>
           <p className="text-sm text-muted-foreground">
-            Save these points for <span className="font-medium text-foreground">{row.discord_username}</span>,{" "}
+            Save these points for <span className="font-bold text-foreground">{row.discord_username}</span>,{" "}
             {formatWeekRange(row.week_date)}?
           </p>
-          <div className="mt-3 divide-y divide-border rounded-2xl border border-border text-sm">
+          <div className="mt-3 rounded-field bg-surface-muted px-4 py-2">
             {DAY_COLUMNS.map((day) => (
-              <div key={day} className="flex items-center justify-between px-3.5 py-1.5">
-                <span className="text-muted-foreground">{DAY_LABELS[day]}</span>
-                <span className="tabular-nums text-foreground">{values[day]}</span>
-              </div>
+              <KeyValueRow key={day} label={DAY_LABELS[day]} value={values[day]} />
             ))}
-            <div className="flex items-center justify-between px-3.5 py-1.5 font-medium text-foreground">
-              <span>Total</span>
-              <span className="tabular-nums">{total}</span>
+            <div className="mt-1 border-t border-line pt-1">
+              <KeyValueRow label="Total" value={total} emphasis />
             </div>
           </div>
           <div className="mt-6 flex justify-end gap-2">

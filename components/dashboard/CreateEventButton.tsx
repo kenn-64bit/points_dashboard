@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useToast } from "@/components/common/Toast";
 import { Modal } from "@/components/common/Modal";
 import { Button } from "@/components/common/Button";
+import { Label, inputClasses } from "@/components/common/Field";
 
 export function CreateEventButton({ variant = "pill" }: { variant?: "pill" | "row" }) {
   const router = useRouter();
@@ -51,7 +52,7 @@ export function CreateEventButton({ variant = "pill" }: { variant?: "pill" | "ro
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm font-semibold text-accent transition-colors hover:bg-accent-soft"
+          className="flex w-full items-center gap-2 px-5 py-3 text-left text-sm font-extrabold text-primary transition-colors hover:bg-accent-soft"
         >
           <span aria-hidden className="text-base leading-none">
             +
@@ -66,15 +67,16 @@ export function CreateEventButton({ variant = "pill" }: { variant?: "pill" | "ro
 
       {open && (
         <Modal>
-          <h3 className="mb-4 text-lg font-semibold text-foreground">Create Event</h3>
+          <h3 className="mb-4 text-lg font-extrabold text-foreground">Create Event</h3>
           <form onSubmit={handleSubmit}>
-            <label className="mb-1 block text-xs text-muted-foreground">Event name</label>
+            <Label htmlFor="event-name">Event name</Label>
             <input
+              id="event-name"
               autoFocus
               value={eventName}
               onChange={(e) => setEventName(e.target.value)}
               placeholder="e.g. September Gaming Night"
-              className="w-full rounded-2xl border border-border bg-surface-muted px-3.5 py-2.5 text-sm text-foreground outline-none focus:border-accent"
+              className={inputClasses}
             />
             <div className="mt-6 flex justify-end gap-2">
               <Button type="button" variant="ghost" onClick={closeModal} disabled={submitting}>

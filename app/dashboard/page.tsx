@@ -22,8 +22,8 @@ export default async function DashboardPage() {
   const result = await loadEvents();
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col justify-center px-4 py-16 sm:px-6 sm:py-24">
-      <h1 className="mb-8 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Events</h1>
+    <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col justify-center px-4 py-12 sm:px-6 sm:py-16">
+      <h1 className="mb-8 text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">Events</h1>
       {"error" in result ? <ErrorState message={result.error} /> : <EventsList events={result.events} />}
     </div>
   );

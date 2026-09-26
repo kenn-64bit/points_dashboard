@@ -3,9 +3,9 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/common/Button";
-
-const INPUT_CLASSES =
-  "w-full rounded-2xl border border-border bg-surface-muted px-3.5 py-2.5 text-sm text-foreground outline-none focus:border-accent";
+import { Panel } from "@/components/common/Panel";
+import { LeafMark } from "@/components/common/LeafMark";
+import { Label, inputClasses } from "@/components/common/Field";
 
 export function LoginForm({ next }: { next: string }) {
   const router = useRouter();
@@ -38,16 +38,14 @@ export function LoginForm({ next }: { next: string }) {
   }
 
   return (
-    <div className="rounded-3xl border border-border bg-surface p-6 shadow-sm sm:p-8">
-      <span className="mb-5 block h-9 w-9 rounded-full bg-gradient-to-br from-accent-from to-accent-to" aria-hidden />
-      <h1 className="text-xl font-semibold tracking-tight text-foreground">Sign in</h1>
+    <Panel bodyClassName="p-6 sm:p-8">
+      <LeafMark className="mb-5 h-10 w-10" />
+      <h1 className="text-xl font-extrabold tracking-tight text-foreground">Sign in</h1>
       <p className="mt-1 text-sm text-muted-foreground">Access is limited to invited team members.</p>
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-4">
         <div>
-          <label htmlFor="email" className="mb-1 block text-xs text-muted-foreground">
-            Email
-          </label>
+          <Label htmlFor="email">Email</Label>
           <input
             id="email"
             type="email"
@@ -56,13 +54,11 @@ export function LoginForm({ next }: { next: string }) {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className={INPUT_CLASSES}
+            className={inputClasses}
           />
         </div>
         <div>
-          <label htmlFor="password" className="mb-1 block text-xs text-muted-foreground">
-            Password
-          </label>
+          <Label htmlFor="password">Password</Label>
           <input
             id="password"
             type="password"
@@ -70,7 +66,7 @@ export function LoginForm({ next }: { next: string }) {
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className={INPUT_CLASSES}
+            className={inputClasses}
           />
         </div>
 
@@ -79,13 +75,13 @@ export function LoginForm({ next }: { next: string }) {
             type="checkbox"
             checked={remember}
             onChange={(e) => setRemember(e.target.checked)}
-            className="h-4 w-4 accent-accent"
+            className="h-4 w-4 accent-primary"
           />
           Remember me for 30 days
         </label>
 
         {error && (
-          <p role="alert" className="rounded-2xl bg-danger-soft px-3.5 py-2.5 text-sm text-danger">
+          <p role="alert" className="rounded-field bg-danger-soft px-3.5 py-2.5 text-sm text-danger">
             {error}
           </p>
         )}
@@ -94,6 +90,6 @@ export function LoginForm({ next }: { next: string }) {
           {submitting ? "Signing in…" : "Sign in"}
         </Button>
       </form>
-    </div>
+    </Panel>
   );
 }

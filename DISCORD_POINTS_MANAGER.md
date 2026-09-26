@@ -24,6 +24,7 @@
 - **CSV Export** – Export weekly data by event for archival/analysis
 - **Month-Based Organization** – Auto-group data by creation month
 - **Responsive Design** – Mobile-friendly admin dashboard
+- **Island Design System + Day/Night Themes** – Warm, ACNH-inspired UI with a light/dark switch; see [DESIGN.md](DESIGN.md)
 - **Data Persistence** – All changes saved to Supabase in real-time
 
 ### 📊 Data Model

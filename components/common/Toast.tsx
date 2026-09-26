@@ -39,10 +39,9 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
         {toasts.map((t) => (
           <div
             key={t.id}
-            className={`pointer-events-auto rounded-full px-4 py-2 text-sm font-medium shadow-lg ${
-              t.kind === "success"
-                ? "bg-gradient-to-br from-accent-from to-accent-to text-accent-foreground"
-                : "bg-danger text-danger-foreground"
+            role={t.kind === "error" ? "alert" : "status"}
+            className={`pointer-events-auto rounded-full px-4 py-2 text-sm font-bold shadow-panel ${
+              t.kind === "success" ? "bg-primary text-primary-foreground" : "bg-danger text-danger-foreground"
             }`}
           >
             {t.message}

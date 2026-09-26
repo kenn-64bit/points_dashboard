@@ -6,7 +6,7 @@ import { PointsTable } from "@/components/dashboard/PointsTable";
 import { BulkImportButton } from "@/components/dashboard/BulkImportButton";
 import { Loading } from "@/components/common/Loading";
 import { ErrorState } from "@/components/common/ErrorState";
-import { getCurrentWeekMonday } from "@/lib/week";
+import { formatWeekRange, getCurrentWeekMonday } from "@/lib/week";
 import type { PointsTableRow } from "@/types";
 
 export function EventWorkspace({ eventId }: { eventId: string }) {
@@ -50,6 +50,7 @@ export function EventWorkspace({ eventId }: { eventId: string }) {
       {!error && rows !== null && (
         <PointsTable
           rows={rows}
+          label={formatWeekRange(week)}
           onRowUpdated={(updated) =>
             setRows((prev) => (prev ? prev.map((r) => (r.discord_id === updated.discord_id ? updated : r)) : prev))
           }

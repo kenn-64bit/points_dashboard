@@ -5,6 +5,7 @@ import { DAY_COLUMNS, DAY_LABELS } from "@/types";
 import type { Day, PointsTableRow } from "@/types";
 import { PointsEditorModal } from "@/components/dashboard/PointsEditorModal";
 import { Badge } from "@/components/common/Badge";
+import { Panel } from "@/components/common/Panel";
 
 type SortState = { day: Day; dir: "asc" | "desc" } | null;
 
@@ -35,9 +36,11 @@ function SortIcon({ direction }: { direction: "asc" | "desc" | null }) {
 
 export function PointsTable({
   rows,
+  label,
   onRowUpdated,
 }: {
   rows: PointsTableRow[];
+  label?: string;
   onRowUpdated: (row: PointsTableRow) => void;
 }) {
   const [editingRow, setEditingRow] = useState<PointsTableRow | null>(null);
@@ -70,18 +73,22 @@ export function PointsTable({
   }
 
   if (rows.length === 0) {
-    return <p className="text-sm text-muted-foreground">No participants yet for this event.</p>;
+    return (
+      <Panel bodyClassName="px-5 py-4">
+        <p className="text-sm text-muted-foreground">No participants yet for this event.</p>
+      </Panel>
+    );
   }
 
   return (
     <>
-      <div className="overflow-x-auto rounded-3xl border border-border">
+      <Panel label={label} bodyClassName="overflow-x-auto">
         <table className="w-full min-w-[640px] text-sm" onMouseLeave={clearHover}>
           <thead className="bg-surface-muted">
             <tr className="divide-x divide-border border-b border-border">
               <th
                 onMouseEnter={() => setHoveredCol(null)}
-                className="px-5 py-4 text-left font-medium text-foreground"
+                className="px-5 py-4 text-left font-extrabold text-foreground"
               >
                 User
               </th>
@@ -92,13 +99,13 @@ export function PointsTable({
                   <th
                     key={day}
                     onMouseEnter={() => setHoveredCol(colIndex)}
-                    className={`px-4 py-4 font-medium transition-colors ${cellClass(null, colIndex)}`}
+                    className={`px-4 py-4 font-bold transition-colors ${cellClass(null, colIndex)}`}
                   >
                     <button
                       type="button"
                       onClick={() => toggleSort(day)}
                       className={`flex w-full items-center justify-center gap-1.5 hover:text-foreground ${
-                        active ? "text-foreground" : "text-muted-foreground"
+                        active ? "text-accent-ink" : "text-muted-foreground"
                       }`}
                     >
                       {DAY_LABELS[day]}
@@ -109,13 +116,13 @@ export function PointsTable({
               })}
               <th
                 onMouseEnter={() => setHoveredCol(TOTAL_COL)}
-                className={`px-5 py-4 text-center font-medium text-foreground transition-colors ${cellClass(null, TOTAL_COL)}`}
+                className={`px-5 py-4 text-center font-extrabold text-foreground transition-colors ${cellClass(null, TOTAL_COL)}`}
               >
                 Total
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border">
+          <tbody className="divide-y divide-dashed divide-line">
             {displayRows.map((row) => (
               <tr key={row.discord_id} onMouseEnter={() => setHoveredRow(row.discord_id)} className="divide-x divide-border">
                 <td
@@ -124,7 +131,7 @@ export function PointsTable({
                 >
                   <button
                     onClick={() => setEditingRow(row)}
-                    className="text-left text-foreground hover:underline"
+                    className="text-left font-bold text-foreground transition-colors hover:text-accent-ink hover:underline hover:decoration-dashed hover:underline-offset-4"
                     title="Edit points"
                   >
                     {row.discord_username}
@@ -146,13 +153,13 @@ export function PointsTable({
                   onMouseEnter={() => setHoveredCol(TOTAL_COL)}
                   className={`px-5 py-4 text-center transition-colors ${cellClass(row.discord_id, TOTAL_COL)}`}
                 >
-                  <Badge tone="accent">{row.total_points}</Badge>
+                  <Badge tone="total">{row.total_points}</Badge>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
-      </div>
+      </Panel>
       {editingRow && (
         <PointsEditorModal
           row={editingRow}

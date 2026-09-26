@@ -4,8 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatDate, formatWeekRange, getCurrentWeekMonday, getWeeksBetween, normalizeToMonday } from "@/lib/week";
 import { useToast } from "@/components/common/Toast";
-import { Modal } from "@/components/common/Modal";
 import { Button } from "@/components/common/Button";
+import { ConfirmDialog } from "@/components/common/ConfirmDialog";
+import { MenuItem, MenuList, MenuPanel, SelectTrigger } from "@/components/common/Select";
 
 const WEEKDAY_LABELS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
 
@@ -156,9 +157,9 @@ export function WeekSelector({
   const calendarDays = buildCalendarGrid(viewDate);
   const monthLabel = viewDate.toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
 
-  // The highlighted span: while picking or hovering, a live emerald preview
-  // (possibly spanning several weeks); otherwise a muted static indicator of
-  // the currently selected week.
+  // The highlighted span: while picking or hovering, a live teal preview
+  // (possibly spanning several weeks); otherwise an orange "you are here"
+  // indicator of the currently selected week.
   let rangeStart: string;
   let rangeEnd: string;
   let isActivePreview: boolean;
@@ -183,44 +184,40 @@ export function WeekSelector({
   return (
     <div ref={containerRef} className="flex flex-wrap items-center gap-3">
       <div className="relative">
-        <button
-          type="button"
+        <SelectTrigger
+          open={open}
           onClick={() => {
             setOpen((o) => !o);
             setCalendarOpen(false);
           }}
-          className="flex items-center gap-2 rounded-full border border-border bg-surface-muted px-3.5 py-2 text-sm text-foreground"
         >
           {formatWeekRange(selectedWeek)}
-          <span aria-hidden className="text-xs text-muted-foreground">
-            ▾
-          </span>
-        </button>
+        </SelectTrigger>
         {open && (
-          <div className="absolute left-0 top-full z-20 mt-1 w-64 overflow-hidden rounded-2xl border border-border bg-surface py-1 shadow-lg">
-            {weeks.map((week) => (
-              <div key={week} className="flex items-center hover:bg-accent-soft">
-                <button
-                  type="button"
-                  onClick={() => handleSelect(week)}
-                  className={`flex-1 px-3.5 py-2 text-left text-sm ${
-                    week === selectedWeek ? "font-medium text-foreground" : "text-muted-foreground"
-                  }`}
+          <MenuPanel className="w-64">
+            <MenuList>
+              {weeks.map((week) => (
+                <MenuItem
+                  key={week}
+                  selected={week === selectedWeek}
+                  onSelect={() => handleSelect(week)}
+                  trailing={
+                    <button
+                      type="button"
+                      onClick={() => setWeekPendingRemoval(week)}
+                      title="Remove week"
+                      aria-label={`Remove ${formatWeekRange(week)}`}
+                      className="px-3.5 py-2 font-bold text-muted-foreground transition-colors hover:text-danger"
+                    >
+                      ×
+                    </button>
+                  }
                 >
                   {formatWeekRange(week)}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setWeekPendingRemoval(week)}
-                  title="Remove week"
-                  aria-label={`Remove ${formatWeekRange(week)}`}
-                  className="px-3.5 py-2 text-muted-foreground hover:text-danger"
-                >
-                  ×
-                </button>
-              </div>
-            ))}
-          </div>
+                </MenuItem>
+              ))}
+            </MenuList>
+          </MenuPanel>
         )}
       </div>
 
@@ -229,42 +226,45 @@ export function WeekSelector({
           Add Week
         </Button>
         {calendarOpen && (
-          <div
-            className="absolute left-0 top-full z-20 mt-1 w-64 rounded-2xl border border-border bg-surface p-3 shadow-lg"
-            onMouseLeave={() => setHoverDate(null)}
-          >
+          <MenuPanel className="w-72 p-3" onMouseLeave={() => setHoverDate(null)}>
             <div className="mb-2 flex items-center justify-between">
               <button
                 type="button"
                 onClick={() => shiftMonth(-1)}
-                className="rounded-full px-1.5 py-0.5 text-sm text-muted-foreground hover:bg-accent-soft"
+                aria-label="Previous month"
+                className="flex h-7 w-7 items-center justify-center rounded-full font-bold text-muted-foreground transition-colors hover:bg-accent-soft hover:text-foreground"
               >
                 ‹
               </button>
-              <span className="text-sm font-medium text-foreground">{monthLabel}</span>
+              <span className="text-sm font-extrabold text-foreground">{monthLabel}</span>
               <button
                 type="button"
                 onClick={() => shiftMonth(1)}
-                className="rounded-full px-1.5 py-0.5 text-sm text-muted-foreground hover:bg-accent-soft"
+                aria-label="Next month"
+                className="flex h-7 w-7 items-center justify-center rounded-full font-bold text-muted-foreground transition-colors hover:bg-accent-soft hover:text-foreground"
               >
                 ›
               </button>
             </div>
             {pickStart ? (
-              <div className="mb-2 flex items-center justify-between text-xs">
-                <span className="text-accent">Pick an end date…</span>
-                <button type="button" onClick={cancelPicking} className="text-muted-foreground hover:text-foreground">
+              <div className="mb-2 flex items-center justify-between border-b border-dashed border-line pb-2 text-xs">
+                <span className="font-bold text-primary">Pick an end date…</span>
+                <button
+                  type="button"
+                  onClick={cancelPicking}
+                  className="font-bold text-muted-foreground hover:text-foreground"
+                >
                   Cancel
                 </button>
               </div>
             ) : (
-              <p className="mb-2 text-xs text-muted-foreground">
+              <p className="mb-2 border-b border-dashed border-line pb-2 text-xs text-muted-foreground">
                 Click a start date, then an end date to add multiple weeks at once.
               </p>
             )}
             <div className="grid grid-cols-7 gap-y-1 text-center text-xs">
               {WEEKDAY_LABELS.map((label) => (
-                <span key={label} className="text-muted-foreground">
+                <span key={label} className="font-bold text-muted-foreground">
                   {label}
                 </span>
               ))}
@@ -274,10 +274,10 @@ export function WeekSelector({
                 const inRange = dateStr >= rangeStart && dateStr <= rangeEnd;
                 const isEndpoint = dateStr === rangeStart || dateStr === rangeEnd;
 
-                const barClass = isActivePreview ? "bg-accent-soft" : "bg-surface-muted";
+                const barClass = isActivePreview ? "bg-primary-soft" : "bg-accent-soft";
                 const circleClass = isActivePreview
-                  ? "bg-gradient-to-br from-accent-from to-accent-to text-accent-foreground"
-                  : "bg-foreground text-background";
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-accent text-accent-foreground";
 
                 return (
                   <button
@@ -290,7 +290,7 @@ export function WeekSelector({
                     } ${inRange && !isEndpoint ? barClass : ""}`}
                   >
                     {isEndpoint ? (
-                      <span className={`mx-auto flex h-6 w-6 items-center justify-center rounded-full font-medium ${circleClass}`}>
+                      <span className={`mx-auto flex h-6 w-6 items-center justify-center rounded-full font-extrabold ${circleClass}`}>
                         {date.getUTCDate()}
                       </span>
                     ) : (
@@ -300,42 +300,22 @@ export function WeekSelector({
                 );
               })}
             </div>
-          </div>
+          </MenuPanel>
         )}
       </div>
 
       {weekPendingRemoval && (
-        <Modal>
-          <div className="flex items-start gap-3">
-            <svg aria-hidden viewBox="0 0 24 24" fill="none" className="mt-0.5 h-8 w-8 shrink-0 text-danger">
-              <path
-                d="M12 3.5 2 20.5h20L12 3.5Z"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinejoin="round"
-                fill="currentColor"
-                fillOpacity="0.12"
-              />
-              <path d="M12 10v4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-              <circle cx="12" cy="17.25" r="0.9" fill="currentColor" />
-            </svg>
-            <div>
-              <h3 className="text-base font-semibold text-foreground">Remove this week?</h3>
-              <p className="mt-1 text-sm text-muted-foreground">
-                All points for <span className="font-medium text-foreground">{formatWeekRange(weekPendingRemoval)}</span>{" "}
-                will be permanently deleted. This can&apos;t be undone.
-              </p>
-            </div>
-          </div>
-          <div className="mt-6 flex justify-end gap-2">
-            <Button variant="ghost" onClick={() => setWeekPendingRemoval(null)} disabled={removing}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleConfirmRemove} disabled={removing}>
-              {removing ? "Removing…" : "Remove Week"}
-            </Button>
-          </div>
-        </Modal>
+        <ConfirmDialog
+          title="Remove this week?"
+          confirmLabel="Remove Week"
+          pendingLabel="Removing…"
+          pending={removing}
+          onConfirm={handleConfirmRemove}
+          onCancel={() => setWeekPendingRemoval(null)}
+        >
+          All points for <span className="font-bold text-foreground">{formatWeekRange(weekPendingRemoval)}</span> will
+          be permanently deleted. This can&apos;t be undone.
+        </ConfirmDialog>
       )}
     </div>
   );

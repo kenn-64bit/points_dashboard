@@ -1,70 +1,82 @@
 @import "tailwindcss";
 
+/* Island design tokens — the single source of truth for color, shape and
+   elevation. See DESIGN.md for what each role is for. Components only ever
+   reference these through Tailwind utilities (bg-surface, text-accent-ink,
+   rounded-panel…), never raw hex values or `dark:` variants: switching
+   themes swaps the tokens, not the markup. */
+
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
-:root {
-  --background: #f3f5f4;
-  --surface: #ffffff;
-  --surface-muted: #eef1f0;
-  --border: rgba(20, 24, 22, 0.08);
-  --foreground: #14181a;
-  --muted-foreground: #5b655f;
-
-  --accent-from: #10b981;
-  --accent-to: #2dd4bf;
-  --accent: var(--accent-to);
-  --accent-foreground: #ffffff;
-  --accent-soft: rgba(16, 185, 129, 0.12);
-
-  --danger: #e11d48;
-  --danger-soft: rgba(225, 29, 72, 0.1);
-  --danger-foreground: #ffffff;
-
-  --glow: rgba(16, 185, 129, 0.05);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0d0c;
-    --surface: #141917;
-    --surface-muted: #1b211f;
-    --border: rgba(255, 255, 255, 0.08);
-    --foreground: #f4f7f6;
-    --muted-foreground: #8b968f;
-
-    --accent-soft: rgba(45, 212, 191, 0.16);
-    --danger-soft: rgba(225, 29, 72, 0.18);
-
-    --glow: rgba(45, 212, 191, 0.14);
-  }
-}
-
-[data-theme="dark"] {
-  --background: #0a0d0c;
-  --surface: #141917;
-  --surface-muted: #1b211f;
-  --border: rgba(255, 255, 255, 0.08);
-  --foreground: #f4f7f6;
-  --muted-foreground: #8b968f;
-
-  --accent-soft: rgba(45, 212, 191, 0.16);
-  --danger-soft: rgba(225, 29, 72, 0.18);
-
-  --glow: rgba(45, 212, 191, 0.14);
-}
-
+/* Island Day */
+:root,
 [data-theme="light"] {
-  --background: #f3f5f4;
-  --surface: #ffffff;
-  --surface-muted: #eef1f0;
-  --border: rgba(20, 24, 22, 0.08);
-  --foreground: #14181a;
-  --muted-foreground: #5b655f;
+  color-scheme: light;
 
-  --accent-soft: rgba(16, 185, 129, 0.12);
-  --danger-soft: rgba(225, 29, 72, 0.1);
+  --background: #f4edd3;
+  --surface: #fdf9ea;
+  --surface-muted: #f5eed6;
+  --border: #e6dab4;
+  --line: #d6c79c;
 
-  --glow: rgba(16, 185, 129, 0.05);
+  --foreground: #5a4a32;
+  --muted-foreground: #7a6746;
+
+  --primary: #136a60;
+  --primary-foreground: #fdf9ea;
+  --primary-soft: rgba(19, 106, 96, 0.14);
+
+  --accent: #f2a04e;
+  --accent-foreground: #4a3014;
+  --accent-ink: #a3530e;
+  --accent-soft: rgba(242, 160, 78, 0.16);
+
+  --total: #7d7330;
+  --total-foreground: #fdf9ea;
+
+  --leaf: #5aa55a;
+
+  --danger: #a33524;
+  --danger-foreground: #fdf9ea;
+  --danger-soft: rgba(163, 53, 36, 0.12);
+
+  --overlay: rgba(59, 47, 31, 0.4);
+  --shadow: rgba(90, 74, 50, 0.12);
+}
+
+/* Island Night */
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --background: #151a2d;
+  --surface: #212741;
+  --surface-muted: #2a3150;
+  --border: rgba(243, 236, 214, 0.1);
+  --line: rgba(243, 236, 214, 0.2);
+
+  --foreground: #f3ecd6;
+  --muted-foreground: #b4ac96;
+
+  --primary: #3fcfbc;
+  --primary-foreground: #10192b;
+  --primary-soft: rgba(63, 207, 188, 0.18);
+
+  --accent: #f5a54a;
+  --accent-foreground: #10192b;
+  --accent-ink: #f5a54a;
+  --accent-soft: rgba(245, 165, 74, 0.16);
+
+  --total: #c9bc6e;
+  --total-foreground: #10192b;
+
+  --leaf: #7cc877;
+
+  --danger: #f07a6e;
+  --danger-foreground: #10192b;
+  --danger-soft: rgba(240, 122, 110, 0.16);
+
+  --overlay: rgba(5, 8, 18, 0.6);
+  --shadow: rgba(0, 0, 0, 0.35);
 }
 
 @theme inline {
@@ -72,30 +84,82 @@
   --color-surface: var(--surface);
   --color-surface-muted: var(--surface-muted);
   --color-border: var(--border);
+  --color-line: var(--line);
+
   --color-foreground: var(--foreground);
   --color-muted-foreground: var(--muted-foreground);
 
-  --color-accent-from: var(--accent-from);
-  --color-accent-to: var(--accent-to);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-soft: var(--primary-soft);
+
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
+  --color-accent-ink: var(--accent-ink);
   --color-accent-soft: var(--accent-soft);
 
-  --color-danger: var(--danger);
-  --color-danger-soft: var(--danger-soft);
-  --color-danger-foreground: var(--danger-foreground);
+  --color-total: var(--total);
+  --color-total-foreground: var(--total-foreground);
 
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-leaf: var(--leaf);
+
+  --color-danger: var(--danger);
+  --color-danger-foreground: var(--danger-foreground);
+  --color-danger-soft: var(--danger-soft);
+
+  --color-overlay: var(--overlay);
+
+  --radius-panel: 1.75rem;
+  --radius-field: 1rem;
+  --shadow-panel: 0 8px 24px -12px var(--shadow), 0 1px 2px var(--shadow);
+
+  --font-sans: var(--font-nunito);
 }
 
-body {
-  min-height: 100dvh;
-  background-color: var(--background);
-  background-image: radial-gradient(700px circle at 15% -10%, var(--glow), transparent 60%),
-    radial-gradient(600px circle at 105% 15%, var(--glow), transparent 60%);
-  background-attachment: fixed;
-  color: var(--foreground);
-  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
-  transition: background-color 0.2s ease, color 0.2s ease;
+@layer base {
+  body {
+    min-height: 100dvh;
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans), ui-rounded, ui-sans-serif, system-ui, sans-serif;
+    font-weight: 500;
+    transition: background-color 0.2s ease-out, color 0.2s ease-out;
+  }
+
+  ::selection {
+    background-color: var(--accent-soft);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+  }
+
+  /* Number fields are driven by explicit +/- steppers, so the native spinners
+     are hidden everywhere to keep inputs clean. */
+  input[type="number"] {
+    appearance: textfield;
+  }
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    appearance: none;
+    margin: 0;
+  }
+}
+
+/* Theme switch crossfade (see ThemeProvider). */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.25s;
+  animation-timing-function: ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }

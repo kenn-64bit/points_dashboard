@@ -46,7 +46,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ ev
   if ("notFound" in result) notFound();
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
+    <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6">
       <Link href="/dashboard" className={buttonClasses("ghost", "mb-4")}>
         ← Back to events
       </Link>
@@ -55,7 +55,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ ev
       ) : (
         <>
           <div className="mb-6 flex items-center justify-between gap-4">
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+            <h1 className="text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">
               {result.event.event_name}
             </h1>
             <Link href={`/dashboard/events/${eventId}/leaderboard`} className={buttonClasses("secondary")}>
@@ -63,7 +63,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ ev
             </Link>
           </div>
           <EventWorkspace eventId={eventId} />
-          <div className="mt-10 flex items-center justify-between border-t border-border pt-6">
+          <div className="mt-10 flex flex-wrap items-center justify-between gap-3 border-t border-dashed border-line pt-6">
             <ExportEventButton eventId={eventId} weeks={weeks} />
             <DeleteEventButton eventId={eventId} eventName={result.event.event_name} />
           </div>
