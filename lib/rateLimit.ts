@@ -45,3 +45,6 @@ export const mutationRateLimit = makeLimiter(Ratelimit.slidingWindow(20, "60 s")
 // Bulk import specifically — matches the "10 imports/hour" the project docs
 // already recommend, since each import can create many users/points rows.
 export const bulkImportRateLimit = makeLimiter(Ratelimit.slidingWindow(10, "60 m"), "ratelimit:bulk-import");
+
+// Login attempts — tight, to slow down password guessing against the roster.
+export const loginRateLimit = makeLimiter(Ratelimit.slidingWindow(10, "15 m"), "ratelimit:login");

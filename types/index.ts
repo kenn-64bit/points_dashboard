@@ -108,3 +108,10 @@ export interface BulkImportResult {
 export interface ApiError {
   error: string;
 }
+
+export type AppUserRole = "admin" | "member";
+
+export interface SessionUser {
+  email: string;
+  role: AppUserRole;
+}

@@ -1,6 +1,6 @@
 import "server-only";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
-import { createMockSupabaseClient } from "@/lib/mockSupabase";
+import { createMockSupabaseClient, MOCK_ADMIN_EMAIL, MOCK_ADMIN_PASSWORD } from "@/lib/mockSupabase";
 
 // Service-role client — bypasses RLS entirely. Only ever import this from
 // app/api/**/route.ts handlers. The browser never receives this key.
@@ -26,7 +26,7 @@ export function getSupabaseAdmin(): SupabaseClient<any, any, any> {
     // this branch's relevance simply by setting real env vars; nothing else
     // in the app needs to change either way. See lib/mockSupabase.ts.
     console.warn(
-      "[dev] Supabase env vars not set — using in-memory mock data instead of a real database."
+      `[dev] Supabase env vars not set — using in-memory mock data instead of a real database. Sign in with ${MOCK_ADMIN_EMAIL} / ${MOCK_ADMIN_PASSWORD}.`
     );
     cachedClient = createMockSupabaseClient() as unknown as SupabaseClient<any, any, any>;
     return cachedClient;

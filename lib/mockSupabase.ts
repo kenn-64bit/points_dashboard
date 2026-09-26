@@ -36,85 +36,47 @@ interface MockPoints {
   updated_at: string;
 }
 
+interface MockAppUser {
+  email: string;
+  password_hash: string;
+  role: "admin" | "member";
+  created_at: string;
+}
+
 interface MockStore {
   events: MockEvent[];
   users: MockUser[];
   points: MockPoints[];
+  app_users: MockAppUser[];
 }
 
-function pointsRow(
-  event_id: string,
-  discord_id: string,
-  week_date: string,
-  values: Partial<Record<(typeof DAY_COLUMNS)[number], number>>
-): MockPoints {
-  const days = Object.fromEntries(DAY_COLUMNS.map((day) => [day, values[day] ?? 0])) as Record<
-    (typeof DAY_COLUMNS)[number],
-    number
-  >;
-  const total_points = DAY_COLUMNS.reduce((sum, day) => sum + days[day], 0);
-  const now = new Date().toISOString();
-  return {
-    point_id: crypto.randomUUID(),
-    event_id,
-    discord_id,
-    ...days,
-    total_points,
-    week_date,
-    created_at: now,
-    updated_at: now,
-  };
+// Dev-only sign-in for mock mode: admin@example.com / admin. The hash was
+// generated with scripts/hash-password.mjs; this account never exists once
+// real Supabase credentials are configured.
+export const MOCK_ADMIN_EMAIL = "admin@example.com";
+export const MOCK_ADMIN_PASSWORD = "admin";
+function seedAppUsers(): MockAppUser[] {
+  return [
+    {
+      email: MOCK_ADMIN_EMAIL,
+      password_hash:
+        "scrypt$wHvq0XtWEWY0q9ULieqsyw==$+2UK8wCD6fVFvYJtDYZo39Xc+Rrr/aCirUgZ/n9S5hEqrxDX7Y6qEOjHscH3K7siXpql0gge7Qb8/UbWEGNstg==",
+      role: "admin",
+      created_at: new Date().toISOString(),
+    },
+  ];
 }
 
 function buildSeedStore(): MockStore {
-  const now = new Date().toISOString();
-  const users: MockUser[] = [
-    { discord_id: "dee-fairy", discord_username: "dee-fairy", created_at: now },
-    { discord_id: "madeinchina6928", discord_username: "madeinchina6928", created_at: now },
-    { discord_id: "phantomaudlowave", discord_username: "phantomaudlowave", created_at: now },
-    { discord_id: "imberribored", discord_username: "imberribored", created_at: now },
-    { discord_id: "danny", discord_username: "Danny", created_at: now },
-  ];
-
-  const eventA = "11111111-1111-1111-1111-111111111111";
-  const eventB = "22222222-2222-2222-2222-222222222222";
-  const events: MockEvent[] = [
-    { event_id: eventA, event_name: "September Gaming Night", created_at: now, month: now.slice(0, 7) },
-    { event_id: eventB, event_name: "Community Challenge", created_at: now, month: now.slice(0, 7) },
-  ];
-
-  const weekPrev = "2026-08-31";
-  const weekCurrent = "2026-09-07";
-
-  const points: MockPoints[] = [
-    pointsRow(eventA, "dee-fairy", weekPrev, { saturday: 10, sunday: 10 }),
-    pointsRow(eventA, "madeinchina6928", weekPrev, { saturday: 30, sunday: 30 }),
-    pointsRow(eventA, "phantomaudlowave", weekPrev, { monday: 5, saturday: 30, sunday: 30 }),
-    pointsRow(eventA, "imberribored", weekPrev, { saturday: 30 }),
-    pointsRow(eventA, "danny", weekPrev, { saturday: 30 }),
-    pointsRow(eventA, "dee-fairy", weekCurrent, { monday: 5, tuesday: 5, friday: 10, saturday: 10 }),
-    pointsRow(eventA, "madeinchina6928", weekCurrent, { wednesday: 10, saturday: 20, sunday: 15 }),
-    pointsRow(eventA, "phantomaudlowave", weekCurrent, {}),
-    pointsRow(eventB, "dee-fairy", weekCurrent, { monday: 2, tuesday: 3, thursday: 4 }),
-    pointsRow(eventB, "imberribored", weekCurrent, { wednesday: 5, thursday: 5, friday: 5 }),
-    pointsRow(eventB, "danny", weekCurrent, {
-      monday: 1,
-      tuesday: 1,
-      wednesday: 1,
-      thursday: 1,
-      friday: 1,
-      saturday: 1,
-      sunday: 1,
-    }),
-  ];
-
-  return { events, users, points };
+  return { events: [], users: [], points: [], app_users: seedAppUsers() };
 }
 
 // Persist across Next.js dev hot-reloads (module cache is otherwise reset per
 // recompiled route, which would silently wipe edits during a session).
 const globalForMock = globalThis as unknown as { __dpmMockStore?: MockStore };
 const store = globalForMock.__dpmMockStore ?? buildSeedStore();
+// A store kept from before app_users existed won't have the key.
+store.app_users ??= seedAppUsers();
 globalForMock.__dpmMockStore = store;
 
 type Row = Record<string, unknown>;

@@ -22,3 +22,7 @@ export function errorResponse(err: unknown, fallbackMessage = "Something went wr
     status === 500 ? fallbackMessage : (err as { message?: string } | null)?.message ?? fallbackMessage;
   return NextResponse.json({ error: message }, { status });
 }
+
+export function unauthorizedResponse() {
+  return NextResponse.json({ error: "Your session has expired — please sign in again." }, { status: 401 });
+}

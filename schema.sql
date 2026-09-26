@@ -61,6 +61,18 @@ create trigger trg_points_updated_at
 before update on points
 for each row execute function set_updated_at();
 
--- No RLS policies: this is an intentionally no-auth, direct-access admin tool.
--- All access is mediated by this app's own API routes using the service-role
--- key server-side — the browser never talks to Supabase directly.
+-- Login roster — only emails listed here can sign in. Managed by hand: add
+-- someone with the SQL printed by `npm run hash-password`, remove them with
+-- `delete from app_users where email = '...';` (takes effect immediately).
+create table app_users (
+  email         text primary key check (email = lower(email)),
+  password_hash text not null,
+  role          text not null default 'member' check (role in ('admin', 'member')),
+  created_at    timestamptz not null default now()
+);
+-- RLS on with no policies: nothing but the service role can read password hashes.
+alter table app_users enable row level security;
+
+-- All access is mediated by this app's own API routes, which require a signed-in
+-- roster member and use the service-role key server-side — the browser never
+-- talks to Supabase directly.
