@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
-import { errorResponse } from "@/lib/apiError";
+import { errorResponse, unauthorizedResponse } from "@/lib/apiError";
+import { getCurrentUser } from "@/lib/auth/dal";
 import { MAX_EVENT_NAME_LENGTH } from "@/lib/validation";
 
 export async function GET() {
   try {
+    if (!(await getCurrentUser())) return unauthorizedResponse();
     const supabase = getSupabaseAdmin();
     const { data, error } = await supabase
       .from("events")
@@ -20,6 +22,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    if (!(await getCurrentUser())) return unauthorizedResponse();
     const body = await request.json();
     const event_name = typeof body.event_name === "string" ? body.event_name.trim() : "";
     if (!event_name) {

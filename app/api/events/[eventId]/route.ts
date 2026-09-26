@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
-import { errorResponse } from "@/lib/apiError";
+import { errorResponse, unauthorizedResponse } from "@/lib/apiError";
+import { getCurrentUser } from "@/lib/auth/dal";
 import { isValidUUID, MAX_EVENT_NAME_LENGTH } from "@/lib/validation";
 
 type Params = { params: Promise<{ eventId: string }> };
 
 export async function GET(_request: NextRequest, { params }: Params) {
   try {
+    if (!(await getCurrentUser())) return unauthorizedResponse();
     const { eventId } = await params;
     if (!isValidUUID(eventId)) return NextResponse.json({ error: "Invalid event id" }, { status: 400 });
 
@@ -23,6 +25,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
 
 export async function PUT(request: NextRequest, { params }: Params) {
   try {
+    if (!(await getCurrentUser())) return unauthorizedResponse();
     const { eventId } = await params;
     if (!isValidUUID(eventId)) return NextResponse.json({ error: "Invalid event id" }, { status: 400 });
 
@@ -53,6 +56,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
 
 export async function DELETE(_request: NextRequest, { params }: Params) {
   try {
+    if (!(await getCurrentUser())) return unauthorizedResponse();
     const { eventId } = await params;
     if (!isValidUUID(eventId)) return NextResponse.json({ error: "Invalid event id" }, { status: 400 });
 

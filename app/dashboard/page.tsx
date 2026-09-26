@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from "@/lib/supabase";
+import { requirePageUser } from "@/lib/auth/dal";
 import { EventsList } from "@/components/dashboard/EventsList";
 import { ErrorState } from "@/components/common/ErrorState";
 import type { Event } from "@/types";
@@ -17,10 +18,11 @@ async function loadEvents(): Promise<{ events: Event[] } | { error: string }> {
 }
 
 export default async function DashboardPage() {
+  await requirePageUser();
   const result = await loadEvents();
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
+    <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col justify-center px-4 py-16 sm:px-6 sm:py-24">
       <h1 className="mb-8 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Events</h1>
       {"error" in result ? <ErrorState message={result.error} /> : <EventsList events={result.events} />}
     </div>

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getSupabaseAdmin } from "@/lib/supabase";
+import { requirePageUser } from "@/lib/auth/dal";
 import { EventWorkspace } from "@/components/dashboard/EventWorkspace";
 import { DeleteEventButton } from "@/components/dashboard/DeleteEventButton";
 import { ExportEventButton } from "@/components/dashboard/ExportEventButton";
@@ -38,6 +39,7 @@ async function loadWeeks(eventId: string): Promise<string[]> {
 }
 
 export default async function EventDetailPage({ params }: { params: Promise<{ eventId: string }> }) {
+  await requirePageUser();
   const { eventId } = await params;
   const [result, weeks] = await Promise.all([loadEvent(eventId), loadWeeks(eventId)]);
 

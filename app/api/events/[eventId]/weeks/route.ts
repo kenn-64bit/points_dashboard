@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
-import { errorResponse } from "@/lib/apiError";
+import { errorResponse, unauthorizedResponse } from "@/lib/apiError";
+import { getCurrentUser } from "@/lib/auth/dal";
 import { isValidUUID } from "@/lib/validation";
 
 type Params = { params: Promise<{ eventId: string }> };
@@ -8,6 +9,7 @@ type Params = { params: Promise<{ eventId: string }> };
 // Distinct weeks that have at least one points row for this event, newest first.
 export async function GET(_request: NextRequest, { params }: Params) {
   try {
+    if (!(await getCurrentUser())) return unauthorizedResponse();
     const { eventId } = await params;
     if (!isValidUUID(eventId)) return NextResponse.json({ error: "Invalid event id" }, { status: 400 });
 

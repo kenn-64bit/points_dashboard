@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getSupabaseAdmin } from "@/lib/supabase";
+import { requirePageUser } from "@/lib/auth/dal";
 import { computeLeaderboard } from "@/lib/points";
 import { Leaderboard } from "@/components/dashboard/Leaderboard";
 import { ErrorState } from "@/components/common/ErrorState";
@@ -28,6 +29,7 @@ async function loadLeaderboard(eventId: string): Promise<{ leaderboard: Leaderbo
 }
 
 export default async function LeaderboardPage({ params }: { params: Promise<{ eventId: string }> }) {
+  await requirePageUser();
   const { eventId } = await params;
   const result = await loadLeaderboard(eventId);
 

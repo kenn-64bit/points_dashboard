@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { resolveDiscordId, resolveDiscordIdsBatch } from "@/lib/users";
 import { parseImportFile } from "@/lib/import/parseImportFile";
-import { errorResponse } from "@/lib/apiError";
+import { errorResponse, unauthorizedResponse } from "@/lib/apiError";
+import { getCurrentUser } from "@/lib/auth/dal";
 import { isWithinMaxSize, hasAllowedExtension, isValidUUID, MAX_IMPORT_FILE_SIZE } from "@/lib/validation";
 import { normalizeToMonday, getCurrentWeekMonday } from "@/lib/week";
 import type { BulkImportResult, ImportRowError, ParsedImportRow } from "@/types";
@@ -22,6 +23,7 @@ function chunk<T>(items: T[], size: number): T[][] {
 // the raw uploaded bytes independently and re-checks size/type/columns itself.
 export async function POST(request: NextRequest) {
   try {
+    if (!(await getCurrentUser())) return unauthorizedResponse();
     // Reject clearly-oversized requests before buffering the body into memory
     // — formData() must read the whole multipart payload up front, so waiting
     // until after that to check file.size doesn't actually bound memory use.

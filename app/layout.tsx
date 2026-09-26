@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { Header } from "@/components/common/Header";
 import { ToastProvider } from "@/components/common/Toast";
 import { ThemeProvider, THEME_INIT_SCRIPT } from "@/components/common/ThemeProvider";
 
@@ -33,7 +32,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
         <ThemeProvider>
           <ToastProvider>
-            <Header />
             <main className="flex-1">{children}</main>
           </ToastProvider>
         </ThemeProvider>

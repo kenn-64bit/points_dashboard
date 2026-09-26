@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
-import { errorResponse } from "@/lib/apiError";
+import { errorResponse, unauthorizedResponse } from "@/lib/apiError";
+import { getCurrentUser } from "@/lib/auth/dal";
 import { isValidUUID, isValidDateStr, isValidDayValue } from "@/lib/validation";
 import { isMonday } from "@/lib/week";
 import { DAY_COLUMNS } from "@/types";
@@ -8,6 +9,7 @@ import type { PointsRowWithUser, PointsTableRow } from "@/types";
 
 export async function GET(request: NextRequest) {
   try {
+    if (!(await getCurrentUser())) return unauthorizedResponse();
     const eventId = request.nextUrl.searchParams.get("event_id");
     const weekDate = request.nextUrl.searchParams.get("week_date");
     if (!eventId || !weekDate) {
@@ -71,6 +73,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    if (!(await getCurrentUser())) return unauthorizedResponse();
     const body = await request.json();
     const { event_id, discord_id, week_date } = body;
     if (!event_id || !discord_id || !week_date) {
@@ -107,6 +110,7 @@ export async function POST(request: NextRequest) {
 // Bulk-remove an entire week's points for an event (used by "Remove Week").
 export async function DELETE(request: NextRequest) {
   try {
+    if (!(await getCurrentUser())) return unauthorizedResponse();
     const eventId = request.nextUrl.searchParams.get("event_id");
     const weekDate = request.nextUrl.searchParams.get("week_date");
     if (!eventId || !weekDate) {

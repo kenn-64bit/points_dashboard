@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
-import { errorResponse } from "@/lib/apiError";
+import { errorResponse, unauthorizedResponse } from "@/lib/apiError";
+import { getCurrentUser } from "@/lib/auth/dal";
 import { isValidUUID, isValidDayValue } from "@/lib/validation";
 import { DAY_COLUMNS } from "@/types";
 
@@ -8,6 +9,7 @@ type Params = { params: Promise<{ pointId: string }> };
 
 export async function PUT(request: NextRequest, { params }: Params) {
   try {
+    if (!(await getCurrentUser())) return unauthorizedResponse();
     const { pointId } = await params;
     if (!isValidUUID(pointId)) return NextResponse.json({ error: "Invalid point id" }, { status: 400 });
 
@@ -42,6 +44,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
 
 export async function DELETE(_request: NextRequest, { params }: Params) {
   try {
+    if (!(await getCurrentUser())) return unauthorizedResponse();
     const { pointId } = await params;
     if (!isValidUUID(pointId)) return NextResponse.json({ error: "Invalid point id" }, { status: 400 });
 

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { buildPointsExportCsv, buildEventExportCsv } from "@/lib/csv";
-import { errorResponse } from "@/lib/apiError";
+import { errorResponse, unauthorizedResponse } from "@/lib/apiError";
+import { getCurrentUser } from "@/lib/auth/dal";
 import { isValidUUID, isValidDateStr } from "@/lib/validation";
 import type { PointsRowWithUser } from "@/types";
 
@@ -16,6 +17,7 @@ function mapRows(data: unknown[]): PointsRowWithUser[] {
 
 export async function GET(request: NextRequest, { params }: Params) {
   try {
+    if (!(await getCurrentUser())) return unauthorizedResponse();
     const { eventId } = await params;
     if (!isValidUUID(eventId)) return NextResponse.json({ error: "Invalid event id" }, { status: 400 });
 
