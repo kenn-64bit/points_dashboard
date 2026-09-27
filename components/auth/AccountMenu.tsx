@@ -9,7 +9,7 @@ import { useToast } from "@/components/common/Toast";
 import { Badge } from "@/components/common/Badge";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { ChevronDownIcon, MenuPanel } from "@/components/common/Select";
-import { SignOutIcon, UsersIcon } from "@/components/common/icons";
+import { HistoryIcon, SignOutIcon, UsersIcon } from "@/components/common/icons";
 import type { AppUserRole } from "@/types";
 
 function Avatar({ email, className }: { email: string; className: string }) {
@@ -35,7 +35,7 @@ const ROW_CLASSES = "flex w-full items-center gap-2.5 px-4 py-2.5 text-left text
 
 // The signed-in account in the header: an avatar chip that opens who you are,
 // what your role allows, and Sign out. Below `sm` the header hides its nav,
-// so the menu carries the Team link there instead.
+// so the menu carries the Team and Audit log links there instead.
 export function AccountMenu({ email, role }: { email: string; role: AppUserRole }) {
   const router = useRouter();
   const { showToast } = useToast();
@@ -117,14 +117,24 @@ export function AccountMenu({ email, role }: { email: string; role: AppUserRole 
             </div>
 
             {canManageTeam(role) && (
-              <Link
-                href="/dashboard/team"
-                onClick={() => setOpen(false)}
-                className={`${ROW_CLASSES} hover:bg-accent-soft hover:text-foreground sm:hidden`}
-              >
-                <UsersIcon className="h-4 w-4" />
-                Team
-              </Link>
+              <div className="sm:hidden">
+                <Link
+                  href="/dashboard/team"
+                  onClick={() => setOpen(false)}
+                  className={`${ROW_CLASSES} hover:bg-accent-soft hover:text-foreground`}
+                >
+                  <UsersIcon className="h-4 w-4" />
+                  Team
+                </Link>
+                <Link
+                  href="/dashboard/audit"
+                  onClick={() => setOpen(false)}
+                  className={`${ROW_CLASSES} hover:bg-accent-soft hover:text-foreground`}
+                >
+                  <HistoryIcon className="h-4 w-4" />
+                  Audit log
+                </Link>
+              </div>
             )}
 
             <button

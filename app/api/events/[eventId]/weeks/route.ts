@@ -6,6 +6,7 @@ import { canEdit } from "@/lib/auth/roles";
 import { loadEventWeeks } from "@/lib/eventData";
 import { isValidUUID, isValidDateStr } from "@/lib/validation";
 import { isMonday } from "@/lib/week";
+import { logAudit, weekLabel } from "@/lib/audit";
 
 type Params = { params: Promise<{ eventId: string }> };
 
@@ -48,12 +49,24 @@ export async function POST(request: NextRequest, { params }: Params) {
 
     const rows = [...new Set(weeks as string[])].map((week_date) => ({ event_id: eventId, week_date }));
     const supabase = getSupabaseAdmin();
+    const before = await loadEventWeeks(eventId);
     const { error } = await supabase
       .from("event_weeks")
       .upsert(rows, { onConflict: "event_id,week_date", ignoreDuplicates: true });
     if (error) return errorResponse(error);
 
-    return NextResponse.json({ weeks: await loadEventWeeks(eventId) }, { status: 201 });
+    const after = await loadEventWeeks(eventId);
+    // Only the weeks that weren't in the event's list already.
+    const added = after.filter((week) => !before.includes(week));
+    if (added.length > 0) {
+      await logAudit(user, {
+        action: "week.add",
+        event_id: eventId,
+        target: added[0],
+        details: { weeks: added.map((date) => ({ date, label: weekLabel(after, date) })) },
+      });
+    }
+    return NextResponse.json({ weeks: after }, { status: 201 });
   } catch (err) {
     return errorResponse(err);
   }
@@ -73,13 +86,32 @@ export async function DELETE(request: NextRequest, { params }: Params) {
     }
 
     const supabase = getSupabaseAdmin();
+    // Labels ("Week 2 · …") must be worked out before the weeks disappear.
+    const before = await loadEventWeeks(eventId);
     const [points, planned] = await Promise.all([
-      supabase.from("points").delete().eq("event_id", eventId).in("week_date", weeks),
-      supabase.from("event_weeks").delete().eq("event_id", eventId).in("week_date", weeks),
+      supabase.from("points").delete().eq("event_id", eventId).in("week_date", weeks).select("week_date"),
+      supabase.from("event_weeks").delete().eq("event_id", eventId).in("week_date", weeks).select("week_date"),
     ]);
     if (points.error) return errorResponse(points.error);
     if (planned.error) return errorResponse(planned.error);
 
+    // Only the weeks the event actually had, with the scores each one lost.
+    const deletedPoints = (points.data ?? []).map((row) => row.week_date as string);
+    const removed = [...new Set([...deletedPoints, ...(planned.data ?? []).map((row) => row.week_date as string)])].sort();
+    if (removed.length > 0) {
+      await logAudit(user, {
+        action: "week.remove",
+        event_id: eventId,
+        target: removed[0],
+        details: {
+          weeks: removed.map((date) => ({
+            date,
+            label: weekLabel(before, date),
+            scores: deletedPoints.filter((week) => week === date).length,
+          })),
+        },
+      });
+    }
     return new NextResponse(null, { status: 204 });
   } catch (err) {
     return errorResponse(err);

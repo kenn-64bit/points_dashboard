@@ -6,6 +6,7 @@ import { canEdit } from "@/lib/auth/roles";
 import { isValidUUID, isValidDateStr, isValidDayValue } from "@/lib/validation";
 import { isMonday } from "@/lib/week";
 import { loadWeekPoints } from "@/lib/weekPoints";
+import { logAudit } from "@/lib/audit";
 import { DAY_COLUMNS } from "@/types";
 
 export async function GET(request: NextRequest) {
@@ -57,6 +58,14 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) return errorResponse(error);
+
+    await logAudit(user, {
+      action: "score.set",
+      event_id,
+      player: discord_id,
+      week: week_date,
+      details: { days: Object.fromEntries(DAY_COLUMNS.map((day) => [day, data[day]])) },
+    });
     return NextResponse.json({ point: data }, { status: 201 });
   } catch (err) {
     return errorResponse(err);

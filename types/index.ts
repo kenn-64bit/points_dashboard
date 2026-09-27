@@ -143,3 +143,36 @@ export interface TeamMember {
   role: AppUserRole;
   created_at: string;
 }
+
+// Keep in sync with the audit_log.action check in schema.sql.
+export type AuditAction =
+  | "score.set"
+  | "score.update"
+  | "score.delete"
+  | "week.add"
+  | "week.remove"
+  | "import"
+  | "participants.add"
+  | "event.create"
+  | "event.update"
+  | "event.delete"
+  | "team.add"
+  | "team.role"
+  | "team.password"
+  | "team.remove"
+  | "export.week"
+  | "export.leaderboard";
+
+// An audit_log row (see AUDIT_LOG.md). Names are snapshots from when the
+// action happened, and actor_role is the role the actor had then.
+export interface AuditRow {
+  id: number;
+  created_at: string;
+  actor_email: string;
+  actor_role: AppUserRole;
+  action: AuditAction;
+  event_id: string | null;
+  event_name: string | null;
+  target: string | null;
+  details: Record<string, unknown>;
+}

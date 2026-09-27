@@ -95,6 +95,56 @@ create table app_users (
 -- RLS on with no policies: nothing but the service role can read password hashes.
 alter table app_users enable row level security;
 
+-- Admin audit log (see AUDIT_LOG.md). Written only by the app's API routes
+-- through lib/audit.ts; read only by admins on /dashboard/audit.
+create table audit_log (
+  id          bigint generated always as identity primary key,
+  created_at  timestamptz not null default now(),
+  -- Snapshots, not foreign keys: removing someone from the team or changing
+  -- their role keeps their history as it was. Viewers appear only for exports.
+  actor_email text not null,
+  actor_role  text not null check (actor_role in ('admin', 'editor', 'viewer')),
+  -- Keep in sync with AuditAction in types/index.ts.
+  action      text not null check (action in (
+    'score.set', 'score.update', 'score.delete',
+    'week.add', 'week.remove',
+    'import', 'participants.add',
+    'event.create', 'event.update', 'event.delete',
+    'team.add', 'team.role', 'team.password', 'team.remove',
+    'export.week', 'export.leaderboard'
+  )),
+  -- No foreign key on purpose: deleting an event must not cascade-delete its
+  -- history. Empty for team actions. The name is a snapshot.
+  event_id    uuid,
+  event_name  text,
+  target      text,                       -- player name, week date, member email or file name
+  details     jsonb not null default '{}' -- before/after values, counts, week label. Never passwords
+);
+create index idx_audit_log_created on audit_log (created_at desc);
+create index idx_audit_log_actor on audit_log (actor_email, created_at desc);
+create index idx_audit_log_event on audit_log (event_id, created_at desc);
+-- RLS on with no policies, like app_users: only the service role can touch it.
+alter table audit_log enable row level security;
+
+-- Append-only. The app never updates or deletes log rows; this blocks it in
+-- the database too. The owner can still drop the triggers, so it prevents
+-- accidents, not a determined Supabase admin. To prune old rows, drop
+-- trg_audit_log_no_edit first.
+create or replace function audit_log_append_only()
+returns trigger as $$
+begin
+  raise exception 'audit_log is append-only';
+end;
+$$ language plpgsql;
+
+create trigger trg_audit_log_no_edit
+before update or delete on audit_log
+for each row execute function audit_log_append_only();
+
+create trigger trg_audit_log_no_truncate
+before truncate on audit_log
+for each statement execute function audit_log_append_only();
+
 -- All access is mediated by this app's own API routes, which require a signed-in
 -- roster member and use the service-role key server-side — the browser never
 -- talks to Supabase directly.
@@ -135,3 +185,43 @@ alter table app_users enable row level security;
 --   update app_users set role = 'editor' where role = 'member';
 --   alter table app_users alter column role set default 'viewer';
 --   alter table app_users add constraint app_users_role_check check (role in ('admin', 'editor', 'viewer'));
+
+-- Migration for projects created before the audit log (2026-09-28). Until it
+-- runs, actions still work but nothing is logged ("[audit]" errors in the
+-- server log) and /dashboard/audit shows an error. Safe to run once:
+--
+--   create table audit_log (
+--     id          bigint generated always as identity primary key,
+--     created_at  timestamptz not null default now(),
+--     actor_email text not null,
+--     actor_role  text not null check (actor_role in ('admin', 'editor', 'viewer')),
+--     action      text not null check (action in (
+--       'score.set', 'score.update', 'score.delete',
+--       'week.add', 'week.remove',
+--       'import', 'participants.add',
+--       'event.create', 'event.update', 'event.delete',
+--       'team.add', 'team.role', 'team.password', 'team.remove',
+--       'export.week', 'export.leaderboard'
+--     )),
+--     event_id    uuid,
+--     event_name  text,
+--     target      text,
+--     details     jsonb not null default '{}'
+--   );
+--   create index idx_audit_log_created on audit_log (created_at desc);
+--   create index idx_audit_log_actor on audit_log (actor_email, created_at desc);
+--   create index idx_audit_log_event on audit_log (event_id, created_at desc);
+--   alter table audit_log enable row level security;
+--
+--   create or replace function audit_log_append_only()
+--   returns trigger as $$
+--   begin
+--     raise exception 'audit_log is append-only';
+--   end;
+--   $$ language plpgsql;
+--   create trigger trg_audit_log_no_edit
+--   before update or delete on audit_log
+--   for each row execute function audit_log_append_only();
+--   create trigger trg_audit_log_no_truncate
+--   before truncate on audit_log
+--   for each statement execute function audit_log_append_only();

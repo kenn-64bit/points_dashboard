@@ -1,6 +1,6 @@
 import "server-only";
 import { DAY_COLUMNS } from "@/types";
-import type { AppUserRole } from "@/types";
+import type { AppUserRole, AuditRow } from "@/types";
 
 // In-memory stand-in for the Supabase client, used only when
 // NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY aren't set (see
@@ -58,6 +58,7 @@ interface MockStore {
   users: MockUser[];
   points: MockPoints[];
   app_users: MockAppUser[];
+  audit_log: AuditRow[];
 }
 
 // Dev-only sign-ins for mock mode, one per role, all with the password
@@ -78,17 +79,25 @@ function seedAppUsers(): MockAppUser[] {
 }
 
 function buildSeedStore(): MockStore {
-  return { events: [], event_weeks: [], users: [], points: [], app_users: seedAppUsers() };
+  return { events: [], event_weeks: [], users: [], points: [], app_users: seedAppUsers(), audit_log: [] };
 }
 
 // Persist across Next.js dev hot-reloads (module cache is otherwise reset per
 // recompiled route, which would silently wipe edits during a session).
-const globalForMock = globalThis as unknown as { __dpmMockStore?: MockStore };
+const globalForMock = globalThis as unknown as { __dpmMockStore?: MockStore; __dpmAuditSeq?: number };
 const store = globalForMock.__dpmMockStore ?? buildSeedStore();
 // A store kept from before app_users existed won't have the key.
 store.app_users ??= seedAppUsers();
 store.event_weeks ??= [];
+store.audit_log ??= [];
 globalForMock.__dpmMockStore = store;
+
+// audit_log's identity column. The counter lives on globalThis with the store,
+// since each recompiled route can hold its own copy of this module.
+function nextAuditId(): number {
+  globalForMock.__dpmAuditSeq ??= store.audit_log.reduce((max, row) => Math.max(max, row.id), 0);
+  return ++globalForMock.__dpmAuditSeq;
+}
 
 type Row = Record<string, unknown>;
 type Filter = [string, unknown];
@@ -102,6 +111,7 @@ type Op =
 class MockQueryBuilder<T extends Row> implements PromiseLike<{ data: unknown; error: { message: string } | null }> {
   private filters: Filter[] = [];
   private inFilters: [string, unknown[]][] = [];
+  private ltFilters: Filter[] = [];
   private orderSpec: { col: string; ascending: boolean } | null = null;
   private limitN: number | null = null;
   private selectSpec: string | null = null;
@@ -120,6 +130,10 @@ class MockQueryBuilder<T extends Row> implements PromiseLike<{ data: unknown; er
   }
   in(col: string, values: unknown[]) {
     this.inFilters.push([col, values]);
+    return this;
+  }
+  lt(col: string, value: unknown) {
+    this.ltFilters.push([col, value]);
     return this;
   }
   order(col: string, opts?: { ascending?: boolean }) {
@@ -169,7 +183,8 @@ class MockQueryBuilder<T extends Row> implements PromiseLike<{ data: unknown; er
   private matches(row: T): boolean {
     return (
       this.filters.every(([col, value]) => (row as Row)[col] === value) &&
-      this.inFilters.every(([col, values]) => values.includes((row as Row)[col]))
+      this.inFilters.every(([col, values]) => values.includes((row as Row)[col])) &&
+      this.ltFilters.every(([col, value]) => ((row as Row)[col] as number | string) < (value as number | string))
     );
   }
 
@@ -209,6 +224,19 @@ class MockQueryBuilder<T extends Row> implements PromiseLike<{ data: unknown; er
     }
     if (this.table === "event_weeks") {
       return { event_id: payload.event_id, week_date: payload.week_date, created_at: now };
+    }
+    if (this.table === "audit_log") {
+      return {
+        id: nextAuditId(),
+        created_at: now,
+        actor_email: payload.actor_email,
+        actor_role: payload.actor_role,
+        action: payload.action,
+        event_id: payload.event_id ?? null,
+        event_name: payload.event_name ?? null,
+        target: payload.target ?? null,
+        details: payload.details ?? {},
+      };
     }
     if (this.table === "app_users") {
       return { email: payload.email, password_hash: payload.password_hash, role: payload.role ?? "viewer", created_at: now };

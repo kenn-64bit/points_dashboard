@@ -6,6 +6,7 @@ import { canManageTeam, isAppUserRole } from "@/lib/auth/roles";
 import { hashPassword } from "@/lib/auth/password";
 import { TEAM_COLUMNS, toTeamMember } from "@/lib/team";
 import { parseEmail, passwordProblem } from "@/lib/validation";
+import { logAudit } from "@/lib/audit";
 import type { SessionUser } from "@/types";
 
 type Params = { params: Promise<{ email: string }> };
@@ -58,6 +59,15 @@ export async function PATCH(request: NextRequest, context: Params) {
     }
 
     const supabase = getSupabaseAdmin();
+    // The role as it was, for the audit log's "Editor → Viewer".
+    const { data: current, error: readError } = await supabase
+      .from("app_users")
+      .select("role")
+      .eq("email", email)
+      .maybeSingle();
+    if (readError) return errorResponse(readError);
+    if (!current) return NextResponse.json({ error: NOT_FOUND }, { status: 404 });
+
     const { data, error } = await supabase
       .from("app_users")
       .update(changes)
@@ -67,6 +77,13 @@ export async function PATCH(request: NextRequest, context: Params) {
     if (error) return errorResponse(error);
     if (!data) return NextResponse.json({ error: NOT_FOUND }, { status: 404 });
 
+    if (changes.role && changes.role !== current.role) {
+      await logAudit(user, { action: "team.role", target: email, details: { from: current.role, to: changes.role } });
+    }
+    if (changes.password_hash) {
+      // Only the fact that it happened. Never the password or the hash.
+      await logAudit(user, { action: "team.password", target: email });
+    }
     return NextResponse.json({ member: toTeamMember(data) });
   } catch (err) {
     return errorResponse(err);
@@ -82,10 +99,11 @@ export async function DELETE(_request: NextRequest, context: Params) {
     if (email === user.email) return forbiddenResponse("You can't remove yourself from the team.");
 
     const supabase = getSupabaseAdmin();
-    const { data, error } = await supabase.from("app_users").delete().eq("email", email).select("email");
+    const { data, error } = await supabase.from("app_users").delete().eq("email", email).select("email, role");
     if (error) return errorResponse(error);
     if (!data?.length) return NextResponse.json({ error: NOT_FOUND }, { status: 404 });
 
+    await logAudit(user, { action: "team.remove", target: email, details: { role: data[0].role } });
     return NextResponse.json({ ok: true });
   } catch (err) {
     return errorResponse(err);

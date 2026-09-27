@@ -8,8 +8,8 @@ import { LeafMark } from "@/components/common/LeafMark";
 export function Header({ nav, children }: { nav?: React.ReactNode; children?: React.ReactNode }) {
   return (
     // The wrapper is page-colored so content scrolling under the pinned bar
-    // doesn't show through the gap above it.
-    <div className="sticky top-0 z-30 mx-auto w-full max-w-5xl bg-background px-4 pt-4 sm:px-6">
+    // doesn't show through the gap above it. Never printed.
+    <div className="sticky top-0 z-30 mx-auto w-full max-w-5xl bg-background px-4 pt-4 sm:px-6 print:hidden">
       <header className="flex items-center gap-3 rounded-full border border-border bg-surface py-1.5 pl-3 pr-1.5 shadow-panel">
         <Link href="/dashboard" className="flex shrink-0 items-center gap-2 rounded-full pr-1 text-base font-extrabold tracking-tight text-foreground">
           <LeafMark className="h-7 w-7" />

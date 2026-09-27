@@ -86,71 +86,74 @@
   --pass-other-ink: #5a4a32;
 }
 
-/* Island Night */
-[data-theme="dark"] {
-  color-scheme: dark;
+/* Island Night. Screen only: printing always uses Island Day (see the
+   print block at the end), so Night mode never prints a navy page. */
+@media screen {
+  [data-theme="dark"] {
+    color-scheme: dark;
 
-  --background: #151a2d;
-  --surface: #212741;
-  --surface-muted: #2a3150;
-  --border: rgba(243, 236, 214, 0.1);
-  --line: rgba(243, 236, 214, 0.2);
+    --background: #151a2d;
+    --surface: #212741;
+    --surface-muted: #2a3150;
+    --border: rgba(243, 236, 214, 0.1);
+    --line: rgba(243, 236, 214, 0.2);
 
-  --control: #2a3150;
-  --control-border: rgba(243, 236, 214, 0.1);
+    --control: #2a3150;
+    --control-border: rgba(243, 236, 214, 0.1);
 
-  --foreground: #f3ecd6;
-  --muted-foreground: #b4ac96;
+    --foreground: #f3ecd6;
+    --muted-foreground: #b4ac96;
 
-  /* Night fills are bright enough to be their own ink. */
-  --primary: #3fcfbc;
-  --primary-foreground: #10192b;
-  --primary-ink: #3fcfbc;
-  --primary-soft: rgba(63, 207, 188, 0.18);
+    /* Night fills are bright enough to be their own ink. */
+    --primary: #3fcfbc;
+    --primary-foreground: #10192b;
+    --primary-ink: #3fcfbc;
+    --primary-soft: rgba(63, 207, 188, 0.18);
 
-  --accent: #f5a54a;
-  --accent-foreground: #10192b;
-  --accent-ink: #f5a54a;
-  --accent-soft: rgba(245, 165, 74, 0.16);
+    --accent: #f5a54a;
+    --accent-foreground: #10192b;
+    --accent-ink: #f5a54a;
+    --accent-soft: rgba(245, 165, 74, 0.16);
 
-  --total: #c9bc6e;
-  --total-foreground: #10192b;
+    --total: #c9bc6e;
+    --total-foreground: #10192b;
 
-  --leaf: #7cc877;
+    --leaf: #7cc877;
 
-  --bar-track: #1a1f36;
-  --bar-idle: #474d6b;
-  --bar-stripe: rgba(0, 0, 0, 0.16);
+    --bar-track: #1a1f36;
+    --bar-idle: #474d6b;
+    --bar-stripe: rgba(0, 0, 0, 0.16);
 
-  --cal-header: #3d3664;
-  --cal-title: #dcd2ff;
-  --cal-body: #16302e;
-  --cal-dot: rgba(255, 255, 255, 0.07);
-  --cal-pill: #2e8f82;
-  --cal-pill-ink: #ffffff;
-  --cal-cell: #454f82;
-  --cal-cell-ink: #ffffff;
+    --cal-header: #3d3664;
+    --cal-title: #dcd2ff;
+    --cal-body: #16302e;
+    --cal-dot: rgba(255, 255, 255, 0.07);
+    --cal-pill: #2e8f82;
+    --cal-pill-ink: #ffffff;
+    --cal-cell: #454f82;
+    --cal-cell-ink: #ffffff;
 
-  --danger: #f07a6e;
-  --danger-foreground: #10192b;
-  --danger-ink: #f07a6e;
-  --danger-soft: rgba(240, 122, 110, 0.16);
+    --danger: #f07a6e;
+    --danger-foreground: #10192b;
+    --danger-ink: #f07a6e;
+    --danger-soft: rgba(240, 122, 110, 0.16);
 
-  --overlay: rgba(5, 8, 18, 0.6);
-  --shadow: rgba(0, 0, 0, 0.35);
+    --overlay: rgba(5, 8, 18, 0.6);
+    --shadow: rgba(0, 0, 0, 0.35);
 
-  --pass-game-night: #2d4a36;
-  --pass-game-night-ink: #c9ecbd;
-  --pass-tournament: #2b4262;
-  --pass-tournament-ink: #c6ddf5;
-  --pass-challenge: #54402a;
-  --pass-challenge-ink: #f8d6ae;
-  --pass-giveaway: #52324a;
-  --pass-giveaway-ink: #f6cddb;
-  --pass-community: #3d3664;
-  --pass-community-ink: #dcd2f5;
-  --pass-other: #3f3a33;
-  --pass-other-ink: #ece2c6;
+    --pass-game-night: #2d4a36;
+    --pass-game-night-ink: #c9ecbd;
+    --pass-tournament: #2b4262;
+    --pass-tournament-ink: #c6ddf5;
+    --pass-challenge: #54402a;
+    --pass-challenge-ink: #f8d6ae;
+    --pass-giveaway: #52324a;
+    --pass-giveaway-ink: #f6cddb;
+    --pass-community: #3d3664;
+    --pass-community-ink: #dcd2f5;
+    --pass-other: #3f3a33;
+    --pass-other-ink: #ece2c6;
+  }
 }
 
 @theme inline {
@@ -323,6 +326,22 @@
 }
 ::view-transition-new(root) {
   z-index: 1;
+}
+
+/* Print: backgrounds exactly as on screen, so panels, badges and dividers
+   stay distinct from the page instead of the browser dropping them to save
+   ink. Combined with the screen-only Night tokens above, every printout is
+   Island Day. The page itself prints white to save ink; panels keep their
+   cream fill, and a stronger outline marks their edge on paper. */
+@media print {
+  /* html[data-theme] so it outranks the theme blocks above. */
+  html,
+  html[data-theme] {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    --background: #ffffff;
+    --border: #b39a63;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

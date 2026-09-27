@@ -6,6 +6,7 @@ import { canManageTeam, isAppUserRole } from "@/lib/auth/roles";
 import { hashPassword } from "@/lib/auth/password";
 import { loadTeam, TEAM_COLUMNS, toTeamMember } from "@/lib/team";
 import { parseEmail, passwordProblem } from "@/lib/validation";
+import { logAudit } from "@/lib/audit";
 
 const NOT_ADMIN = "Only admins can manage the team.";
 const ALREADY_ON_TEAM = "That email is already on the team.";
@@ -53,7 +54,9 @@ export async function POST(request: NextRequest) {
     if (error?.code === "23505") return NextResponse.json({ error: ALREADY_ON_TEAM }, { status: 409 });
     if (error) return errorResponse(error);
 
-    return NextResponse.json({ member: toTeamMember(data) }, { status: 201 });
+    const member = toTeamMember(data);
+    await logAudit(user, { action: "team.add", target: member.email, details: { role: member.role } });
+    return NextResponse.json({ member }, { status: 201 });
   } catch (err) {
     return errorResponse(err);
   }

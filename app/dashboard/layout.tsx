@@ -2,7 +2,7 @@ import { requirePageUser } from "@/lib/auth/dal";
 import { canManageTeam } from "@/lib/auth/roles";
 import { Header } from "@/components/common/Header";
 import { NavLink } from "@/components/common/NavLink";
-import { UsersIcon } from "@/components/common/icons";
+import { HistoryIcon, UsersIcon } from "@/components/common/icons";
 import { ThemeToggle } from "@/components/common/ThemeToggle";
 import { AccountMenu } from "@/components/auth/AccountMenu";
 import { RoleProvider } from "@/components/auth/RoleProvider";
@@ -15,10 +15,16 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <Header
         nav={
           canManageTeam(user.role) && (
-            <NavLink href="/dashboard/team">
-              <UsersIcon className="h-4 w-4" />
-              Team
-            </NavLink>
+            <>
+              <NavLink href="/dashboard/team">
+                <UsersIcon className="h-4 w-4" />
+                Team
+              </NavLink>
+              <NavLink href="/dashboard/audit">
+                <HistoryIcon className="h-4 w-4" />
+                Audit log
+              </NavLink>
+            </>
           )
         }
       >

@@ -7,6 +7,7 @@ import { requireApiUser } from "@/lib/auth/dal";
 import { canEdit } from "@/lib/auth/roles";
 import { isWithinMaxSize, hasAllowedExtension, isValidUUID, MAX_IMPORT_FILE_SIZE } from "@/lib/validation";
 import { normalizeToMonday, getCurrentWeekMonday } from "@/lib/week";
+import { logAudit } from "@/lib/audit";
 import type { BulkImportResult, ImportRowError, ParsedImportRow } from "@/types";
 import { DAY_COLUMNS } from "@/types";
 
@@ -129,6 +130,20 @@ export async function POST(request: NextRequest) {
       errors,
       week_date: weekDate,
     };
+    // One summary entry, not one per row. The app doesn't keep uploaded files,
+    // so the file name is what tells an admin which one to look for.
+    await logAudit(user, {
+      action: "import",
+      event_id: eventId,
+      target: file.name.slice(0, 255),
+      week: weekDate,
+      details: {
+        rows: result.imported,
+        saved: result.updated_users,
+        created_users: result.created_users,
+        failed: result.failed,
+      },
+    });
     return NextResponse.json(result, { status: result.success ? 200 : 207 });
   } catch (err) {
     return errorResponse(err);

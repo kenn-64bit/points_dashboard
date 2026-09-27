@@ -104,3 +104,13 @@ export function SignOutIcon(props: IconProps) {
     </Icon>
   );
 }
+
+export function HistoryIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M4 12a8 8 0 1 0 2.4-5.7L4 8.5" />
+      <path d="M4 4.5v4h4" />
+      <path d="M12 8v4l2.8 1.8" />
+    </Icon>
+  );
+}

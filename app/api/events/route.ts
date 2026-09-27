@@ -4,6 +4,7 @@ import { errorResponse, unauthorizedResponse } from "@/lib/apiError";
 import { getCurrentUser, requireApiUser } from "@/lib/auth/dal";
 import { canEdit } from "@/lib/auth/roles";
 import { parseEventInput } from "@/lib/validation";
+import { logAudit } from "@/lib/audit";
 
 export async function GET() {
   try {
@@ -37,6 +38,13 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) return errorResponse(error);
+
+    await logAudit(user, {
+      action: "event.create",
+      event_id: data.event_id,
+      event_name: data.event_name,
+      details: { event_type: data.event_type },
+    });
     return NextResponse.json({ event: data }, { status: 201 });
   } catch (err) {
     return errorResponse(err);

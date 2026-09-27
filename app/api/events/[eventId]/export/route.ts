@@ -5,6 +5,7 @@ import { errorResponse, unauthorizedResponse } from "@/lib/apiError";
 import { getCurrentUser } from "@/lib/auth/dal";
 import { loadEventName, loadEventWeeks } from "@/lib/eventData";
 import { isValidUUID, isValidDateStr } from "@/lib/validation";
+import { logAudit, weekLabel } from "@/lib/audit";
 import type { PointsRowWithUser } from "@/types";
 
 type Params = { params: Promise<{ eventId: string }> };
@@ -31,7 +32,8 @@ function csvResponse(csv: string, filename: string) {
 // sections, so every week in the event's list can be exported.
 export async function GET(request: NextRequest, { params }: Params) {
   try {
-    if (!(await getCurrentUser())) return unauthorizedResponse();
+    const user = await getCurrentUser();
+    if (!user) return unauthorizedResponse();
     const { eventId } = await params;
     if (!isValidUUID(eventId)) return NextResponse.json({ error: "Invalid event id" }, { status: 400 });
 
@@ -66,7 +68,17 @@ export async function GET(request: NextRequest, { params }: Params) {
 
     const slug = csvFileSlug(eventName);
     const filename = week === "all" ? `${slug}-all-weeks.csv` : `${slug}-week-${weeks[0]}.csv`;
-    return csvResponse(buildEventExportCsv(eventName, sections), filename);
+    const csv = buildEventExportCsv(eventName, sections);
+
+    // The default ("latest week") is logged as the week it resolved to.
+    await logAudit(user, {
+      action: "export.week",
+      event_id: eventId,
+      event_name: eventName,
+      target: week === "all" ? "all" : weeks[0],
+      details: week === "all" ? {} : { week_date: weeks[0], week_label: weekLabel(eventWeeks, weeks[0]) },
+    });
+    return csvResponse(csv, filename);
   } catch (err) {
     return errorResponse(err);
   }

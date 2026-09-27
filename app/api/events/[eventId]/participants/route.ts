@@ -6,6 +6,7 @@ import { requireApiUser } from "@/lib/auth/dal";
 import { canEdit } from "@/lib/auth/roles";
 import { isValidUUID, isValidDateStr, parseUsername } from "@/lib/validation";
 import { isMonday } from "@/lib/week";
+import { logAudit } from "@/lib/audit";
 import { DAY_COLUMNS } from "@/types";
 
 type Params = { params: Promise<{ eventId: string }> };
@@ -70,10 +71,24 @@ export async function POST(request: NextRequest, { params }: Params) {
     const { data, error } = await supabase
       .from("points")
       .upsert(payloads, { onConflict: "event_id,discord_id,week_date", ignoreDuplicates: true })
-      .select("point_id");
+      .select("point_id, discord_id");
     if (error) return errorResponse(error);
 
     const added = data?.length ?? 0;
+    if (added > 0) {
+      const addedIds = new Set((data ?? []).map((row) => row.discord_id as string));
+      await logAudit(user, {
+        action: "participants.add",
+        event_id: eventId,
+        week: week_date,
+        details: {
+          names: names.filter((name) => addedIds.has(batch.idsByUsername.get(name)!)),
+          added,
+          skipped: discordIds.length - added,
+          created_users: createdUsers,
+        },
+      });
+    }
     return NextResponse.json(
       { added, created_users: createdUsers, skipped: discordIds.length - added },
       { status: 201 }
