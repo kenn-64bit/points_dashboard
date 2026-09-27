@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { formatWeekRange } from "@/lib/week";
 import { Modal } from "@/components/common/Modal";
 import { Button, buttonClasses } from "@/components/common/Button";
+import { IconButton } from "@/components/common/IconButton";
+import { DownloadIcon } from "@/components/common/icons";
 import { MenuItem, MenuList, MenuPanel, SelectTrigger } from "@/components/common/Select";
 
 export function ExportEventButton({ eventId, weeks }: { eventId: string; weeks: string[] }) {
@@ -25,9 +27,9 @@ export function ExportEventButton({ eventId, weeks }: { eventId: string; weeks: 
 
   return (
     <>
-      <Button variant="secondary" onClick={() => setOpen(true)}>
-        Export Event Data
-      </Button>
+      <IconButton label="Export event data" onClick={() => setOpen(true)}>
+        <DownloadIcon />
+      </IconButton>
 
       {open && (
         <Modal maxWidth="max-w-md">

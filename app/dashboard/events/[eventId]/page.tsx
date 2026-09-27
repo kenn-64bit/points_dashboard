@@ -3,8 +3,6 @@ import { notFound } from "next/navigation";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { requirePageUser } from "@/lib/auth/dal";
 import { EventWorkspace } from "@/components/dashboard/EventWorkspace";
-import { DeleteEventButton } from "@/components/dashboard/DeleteEventButton";
-import { ExportEventButton } from "@/components/dashboard/ExportEventButton";
 import { ErrorState } from "@/components/common/ErrorState";
 import { buttonClasses } from "@/components/common/Button";
 import type { Event } from "@/types";
@@ -53,21 +51,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ ev
       {"error" in result ? (
         <ErrorState message={result.error} />
       ) : (
-        <>
-          <div className="mb-6 flex items-center justify-between gap-4">
-            <h1 className="text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">
-              {result.event.event_name}
-            </h1>
-            <Link href={`/dashboard/events/${eventId}/leaderboard`} className={buttonClasses("secondary")}>
-              Leaderboard
-            </Link>
-          </div>
-          <EventWorkspace eventId={eventId} />
-          <div className="mt-10 flex flex-wrap items-center justify-between gap-3 border-t border-dashed border-line pt-6">
-            <ExportEventButton eventId={eventId} weeks={weeks} />
-            <DeleteEventButton eventId={eventId} eventName={result.event.event_name} />
-          </div>
-        </>
+        <EventWorkspace event={result.event} weeks={weeks} />
       )}
     </div>
   );

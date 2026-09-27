@@ -2,7 +2,7 @@ import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import { DAY_COLUMNS } from "@/types";
 import type { DayValues, ImportFormat, ParsedImportResult, ParsedImportRow } from "@/types";
-import { hasAllowedExtension, MAX_IMPORT_ROWS } from "@/lib/validation";
+import { hasAllowedExtension, MAX_IMPORT_ROWS, parseUsername } from "@/lib/validation";
 
 const DAY_HEADER_BY_COLUMN: Record<(typeof DAY_COLUMNS)[number], string> = {
   monday: "Monday",
@@ -99,12 +99,17 @@ export async function parseImportFile(
 
   rawRows.forEach((raw, idx) => {
     const rowNumber = idx + 2; // header is row 1
-    const username = String(raw[USERNAME_HEADER] ?? "").trim();
-
-    if (!username) {
+    const rawUsername = String(raw[USERNAME_HEADER] ?? "");
+    if (!rawUsername.trim()) {
       invalidRows.push({ row: rowNumber, message: "Missing Discord Username" });
       return;
     }
+    const parsedUsername = parseUsername(rawUsername);
+    if ("error" in parsedUsername) {
+      invalidRows.push({ row: rowNumber, message: parsedUsername.error });
+      return;
+    }
+    const username = parsedUsername.name;
     const usernameKey = username.toLowerCase();
     if (seenUsernames.has(usernameKey)) {
       invalidRows.push({ row: rowNumber, message: `Duplicate username "${username}" in file` });

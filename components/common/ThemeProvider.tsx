@@ -6,8 +6,12 @@ type Theme = "light" | "dark";
 
 interface ThemeContextValue {
   theme: Theme;
-  toggleTheme: () => void;
+  // `origin` is where the reveal circle grows from, in viewport pixels
+  // (the switch's center); defaults to the top-right corner.
+  toggleTheme: (origin?: { x: number; y: number }) => void;
 }
+
+const REVEAL_DURATION_MS = 650;
 
 const STORAGE_KEY = "theme";
 
@@ -60,7 +64,7 @@ function subscribe(onChange: () => void): () => void {
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const theme = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
-  const toggleTheme = useCallback(() => {
+  const toggleTheme = useCallback((origin?: { x: number; y: number }) => {
     const next: Theme = getSnapshot() === "dark" ? "light" : "dark";
     try {
       localStorage.setItem(STORAGE_KEY, next);
@@ -76,7 +80,26 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       apply();
       return;
     }
-    document.startViewTransition(apply);
+    // Circular reveal: the new theme's snapshot is clipped to a circle that
+    // grows from the switch until it covers the farthest corner of the screen.
+    const x = origin?.x ?? window.innerWidth;
+    const y = origin?.y ?? 0;
+    const radius = Math.hypot(Math.max(x, window.innerWidth - x), Math.max(y, window.innerHeight - y));
+    const transition = document.startViewTransition(apply);
+    transition.ready
+      .then(() => {
+        document.documentElement.animate(
+          { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${radius}px at ${x}px ${y}px)`] },
+          {
+            duration: REVEAL_DURATION_MS,
+            easing: "cubic-bezier(0.65, 0, 0.35, 1)",
+            pseudoElement: "::view-transition-new(root)",
+          }
+        );
+      })
+      .catch(() => {
+        // Transition skipped (e.g. tab hidden); the theme is still applied.
+      });
   }, []);
 
   return <ThemeContext.Provider value={{ theme, toggleTheme }}>{children}</ThemeContext.Provider>;

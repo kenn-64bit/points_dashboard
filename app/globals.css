@@ -36,6 +36,22 @@
 
   --leaf: #5aa55a;
 
+  /* Leaderboard bars: track, greyed-out fill and stripe overlay. */
+  --bar-track: #ece2c0;
+  --bar-idle: #d3cdbd;
+  --bar-stripe: rgba(255, 255, 255, 0.3);
+
+  /* Add-week calendar: polka-dot lavender header, mint body, teal weekday
+     pills, cream day tiles. `-ink` is the text on that surface. */
+  --cal-header: #d9cff3;
+  --cal-title: #5e43a8;
+  --cal-body: #c6eadf;
+  --cal-dot: rgba(255, 255, 255, 0.55);
+  --cal-pill: #7fd0c2;
+  --cal-pill-ink: #0f4a42;
+  --cal-cell: #fffdf6;
+  --cal-cell-ink: #5b4a86;
+
   --danger: #a33524;
   --danger-foreground: #fdf9ea;
   --danger-soft: rgba(163, 53, 36, 0.12);
@@ -86,6 +102,19 @@
 
   --leaf: #7cc877;
 
+  --bar-track: #1a1f36;
+  --bar-idle: #474d6b;
+  --bar-stripe: rgba(0, 0, 0, 0.16);
+
+  --cal-header: #3d3664;
+  --cal-title: #dcd2ff;
+  --cal-body: #16302e;
+  --cal-dot: rgba(255, 255, 255, 0.07);
+  --cal-pill: #2e8f82;
+  --cal-pill-ink: #ffffff;
+  --cal-cell: #454f82;
+  --cal-cell-ink: #ffffff;
+
   --danger: #f07a6e;
   --danger-foreground: #10192b;
   --danger-soft: rgba(240, 122, 110, 0.16);
@@ -130,6 +159,17 @@
   --color-total-foreground: var(--total-foreground);
 
   --color-leaf: var(--leaf);
+
+  --color-bar-track: var(--bar-track);
+  --color-bar-idle: var(--bar-idle);
+
+  --color-cal-header: var(--cal-header);
+  --color-cal-title: var(--cal-title);
+  --color-cal-body: var(--cal-body);
+  --color-cal-pill: var(--cal-pill);
+  --color-cal-pill-ink: var(--cal-pill-ink);
+  --color-cal-cell: var(--cal-cell);
+  --color-cal-cell-ink: var(--cal-cell-ink);
 
   --color-danger: var(--danger);
   --color-danger-foreground: var(--danger-foreground);
@@ -222,11 +262,34 @@
   }
 }
 
-/* Theme switch crossfade (see ThemeProvider). */
+/* Leaderboard bars: a lifted track holding a candy-striped fill.
+   `bar-stripes` only sets the texture, so it layers over a flat token fill
+   (bg-accent for the leader, bg-bar-idle for everyone else). The one
+   sanctioned gradient; see DESIGN.md. */
+@utility bar-track {
+  background-color: var(--bar-track);
+  box-shadow: 0 3px 8px -2px var(--shadow), 0 1px 2px var(--shadow);
+}
+
+@utility bar-stripes {
+  background-image: repeating-linear-gradient(-45deg, var(--bar-stripe) 0 10px, transparent 10px 20px);
+}
+
+/* Calendar polka dots, layered over bg-cal-header / bg-cal-body. */
+@utility cal-dots {
+  background-image: radial-gradient(var(--cal-dot) 1.5px, transparent 1.75px);
+  background-size: 12px 12px;
+}
+
+/* Theme switch: the new theme is revealed by a circle growing from the
+   switch (see ThemeProvider); the old snapshot stays put underneath. */
 ::view-transition-old(root),
 ::view-transition-new(root) {
-  animation-duration: 0.25s;
-  animation-timing-function: ease-out;
+  animation: none;
+  mix-blend-mode: normal;
+}
+::view-transition-new(root) {
+  z-index: 1;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -8,7 +8,10 @@ import { Button } from "@/components/common/Button";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { MenuItem, MenuList, MenuPanel, SelectTrigger } from "@/components/common/Select";
 
-const WEEKDAY_LABELS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
+const WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+// Scalloped bottom edge of the calendar header, filled with the body color.
+const WAVE_PATH = `M0 10 V5 ${Array.from({ length: 12 }, (_, i) => `Q${i * 10 + 5} ${i % 2 ? 9 : 1} ${i * 10 + 10} 5`).join(" ")} V10 Z`;
 
 function buildCalendarGrid(viewDate: Date): Date[] {
   const first = new Date(Date.UTC(viewDate.getUTCFullYear(), viewDate.getUTCMonth(), 1));
@@ -27,51 +30,34 @@ function formatShortDate(date: string): string {
   return new Date(`${date}T00:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 }
 
+// Weeks are owned by the caller (newest first) so the page can count and
+// number them; this component picks, adds and removes them.
 export function WeekSelector({
   eventId,
+  weeks,
+  onWeeksChange,
+  weekNumber,
   selectedWeek,
   onChange,
 }: {
   eventId: string;
+  weeks: string[];
+  onWeeksChange: (weeks: string[]) => void;
+  weekNumber: (week: string) => number;
   selectedWeek: string;
   onChange: (week: string) => void;
 }) {
   const router = useRouter();
   const { showToast } = useToast();
-  const [weeks, setWeeks] = useState<string[]>([]);
   const [open, setOpen] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [viewDate, setViewDate] = useState(() => new Date(`${selectedWeek}T00:00:00Z`));
   const [pickStart, setPickStart] = useState<string | null>(null);
   const [pickEnd, setPickEnd] = useState<string | null>(null);
   const [hoverDate, setHoverDate] = useState<string | null>(null);
-  const [addedRange, setAddedRange] = useState<{ start: string; end: string; weeks: number } | null>(null);
   const [weekPendingRemoval, setWeekPendingRemoval] = useState<string | null>(null);
   const [removing, setRemoving] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch(`/api/events/${eventId}/weeks`)
-      .then((res) => res.json())
-      .then((body) => {
-        if (cancelled) return;
-        const fetched: string[] = body.weeks ?? [];
-        const withCurrent = fetched.includes(getCurrentWeekMonday())
-          ? fetched
-          : [getCurrentWeekMonday(), ...fetched];
-        setWeeks(withCurrent);
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setWeeks([getCurrentWeekMonday()]);
-          showToast("Couldn't load the week list", "error");
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [eventId, showToast]);
 
   useEffect(() => {
     if (!open && !calendarOpen) return;
@@ -134,13 +120,8 @@ export function WeekSelector({
   function confirmRange() {
     if (!pickStart || !pickEnd) return;
     const weeksToAdd = getWeeksBetween(normalizeToMonday(pickStart), normalizeToMonday(pickEnd));
-    setWeeks((prev) => {
-      const merged = new Set(prev);
-      weeksToAdd.forEach((w) => merged.add(w));
-      return [...merged].sort().reverse();
-    });
+    onWeeksChange([...new Set([...weeks, ...weeksToAdd])].sort().reverse());
     onChange(weeksToAdd[0]); // earliest week in the picked range
-    setAddedRange({ start: pickStart, end: pickEnd, weeks: weeksToAdd.length });
     showToast(`Added ${formatShortDate(pickStart)} – ${formatShortDate(pickEnd)}`);
     cancelPicking();
     setCalendarOpen(false);
@@ -158,7 +139,7 @@ export function WeekSelector({
       }
       const remaining = weeks.filter((w) => w !== week);
       const fallback = remaining[0] ?? getCurrentWeekMonday();
-      setWeeks(remaining.length ? remaining : [fallback]);
+      onWeeksChange(remaining.length ? remaining : [fallback]);
       if (week === selectedWeek) onChange(fallback);
       showToast("Week removed");
       router.refresh();
@@ -174,7 +155,7 @@ export function WeekSelector({
   // Past dates can't be picked — ranges start today at the earliest.
   const today = formatDate(new Date());
   const viewingCurrentMonth = formatDate(viewDate).slice(0, 7) <= today.slice(0, 7);
-  const monthLabel = viewDate.toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
+  const monthName = viewDate.toLocaleDateString("en-US", { month: "long", timeZone: "UTC" });
 
   // Only the dates the user actually picks are highlighted: the start, the
   // end (or the hovered day while choosing it), and the days in between.
@@ -197,7 +178,7 @@ export function WeekSelector({
           {formatWeekRange(selectedWeek)}
         </SelectTrigger>
         {open && (
-          <MenuPanel className="w-64">
+          <MenuPanel className="w-72">
             <MenuList>
               {weeks.map((week) => (
                 <MenuItem
@@ -216,6 +197,7 @@ export function WeekSelector({
                     </button>
                   }
                 >
+                  <span className="text-xs font-bold text-muted-foreground">Week {weekNumber(week)}</span>
                   {formatWeekRange(week)}
                 </MenuItem>
               ))}
@@ -224,116 +206,123 @@ export function WeekSelector({
         )}
       </div>
 
-      {addedRange && (
-        <span className="inline-flex items-center gap-2 rounded-full bg-accent-soft py-1 pl-3 pr-1 text-xs font-bold text-accent-ink">
-          {formatShortDate(addedRange.start)} – {formatShortDate(addedRange.end)} · {addedRange.weeks}{" "}
-          {addedRange.weeks === 1 ? "week" : "weeks"}
-          <button
-            type="button"
-            onClick={() => setAddedRange(null)}
-            aria-label="Dismiss"
-            className="flex h-5 w-5 items-center justify-center rounded-full hover:bg-accent-soft"
-          >
-            ×
-          </button>
-        </span>
-      )}
-
       <div className="relative">
         <Button type="button" variant="secondary" onClick={openCalendar}>
           Add Week
         </Button>
         {calendarOpen && (
-          <MenuPanel className="w-72 p-3" onMouseLeave={() => setHoverDate(null)}>
-            <div className="mb-2 flex items-center justify-between">
-              <button
-                type="button"
-                onClick={() => shiftMonth(-1)}
-                disabled={viewingCurrentMonth}
-                aria-label="Previous month"
-                className="disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent flex h-7 w-7 items-center justify-center rounded-full font-bold text-muted-foreground transition-colors hover:bg-accent-soft hover:text-foreground"
-              >
-                ‹
-              </button>
-              <span className="text-sm font-extrabold text-foreground">{monthLabel}</span>
-              <button
-                type="button"
-                onClick={() => shiftMonth(1)}
-                aria-label="Next month"
-                className="flex h-7 w-7 items-center justify-center rounded-full font-bold text-muted-foreground transition-colors hover:bg-accent-soft hover:text-foreground"
-              >
-                ›
-              </button>
-            </div>
-            <div className="mb-3 grid grid-cols-2 gap-2">
-              {[
-                { label: "Start", value: pickStart, active: !pickStart },
-                { label: "End", value: pickEnd, active: !!pickStart && !pickEnd },
-              ].map((step) => (
-                <div
-                  key={step.label}
-                  className={`rounded-field border-2 px-3 py-1.5 transition-colors ${
-                    step.active
-                      ? "border-primary bg-primary-soft"
-                      : step.value
-                        ? "border-border bg-surface-muted"
-                        : "border-dashed border-line"
-                  }`}
+          <MenuPanel
+            className="w-[21rem] rounded-panel max-sm:fixed max-sm:inset-x-4 max-sm:top-auto max-sm:w-auto"
+            onMouseLeave={() => setHoverDate(null)}
+          >
+            <div className="cal-dots relative bg-cal-header px-3 pb-4 pt-2.5">
+              <div className="flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => shiftMonth(-1)}
+                  disabled={viewingCurrentMonth}
+                  aria-label="Previous month"
+                  className="flex h-7 w-7 items-center justify-center rounded-full bg-cal-cell text-base font-extrabold text-cal-title shadow-sm transition-colors hover:bg-surface disabled:cursor-not-allowed disabled:opacity-30"
                 >
-                  <div className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">{step.label}</div>
-                  <div className={`text-sm font-extrabold ${step.value ? "text-foreground" : step.active ? "text-primary" : "text-muted-foreground"}`}>
-                    {step.value ? formatShortDate(step.value) : step.active ? "Pick a date" : "—"}
-                  </div>
+                  ‹
+                </button>
+                <div className="text-center leading-none">
+                  <div className="text-2xl font-extrabold tracking-tight text-cal-title">{monthName}</div>
+                  <div className="mt-0.5 text-[11px] font-bold text-cal-title/80">{viewDate.getUTCFullYear()}</div>
                 </div>
-              ))}
+                <button
+                  type="button"
+                  onClick={() => shiftMonth(1)}
+                  aria-label="Next month"
+                  className="flex h-7 w-7 items-center justify-center rounded-full bg-cal-cell text-base font-extrabold text-cal-title shadow-sm transition-colors hover:bg-surface"
+                >
+                  ›
+                </button>
+              </div>
+              <svg
+                aria-hidden
+                viewBox="0 0 120 10"
+                preserveAspectRatio="none"
+                className="absolute inset-x-0 -bottom-px h-3 w-full fill-cal-body"
+              >
+                <path d={WAVE_PATH} />
+              </svg>
             </div>
-            <div className="grid grid-cols-7 gap-y-1 text-center text-xs">
-              {WEEKDAY_LABELS.map((label) => (
-                <span key={label} className="font-bold text-muted-foreground">
-                  {label}
-                </span>
-              ))}
-              {calendarDays.map((date) => {
-                const dateStr = formatDate(date);
-                const inCurrentMonth = date.getUTCMonth() === viewDate.getUTCMonth();
-                const inRange = !!rangeLo && !!rangeHi && dateStr >= rangeLo && dateStr <= rangeHi;
-                const isEndpoint = dateStr === rangeLo || dateStr === rangeHi;
-                const isPast = dateStr < today;
 
-                return (
-                  <button
-                    key={dateStr}
-                    type="button"
-                    disabled={isPast}
-                    title={isPast ? "Past dates can't be added" : undefined}
-                    onMouseEnter={() => !isPast && setHoverDate(dateStr)}
-                    onClick={() => handleDayClick(date)}
-                    className={`py-1 text-foreground transition-colors ${
-                      inCurrentMonth ? "" : "text-muted-foreground/50"
-                    } ${inRange && !isEndpoint ? "bg-primary-soft" : ""} ${isPast ? "cursor-not-allowed text-muted-foreground/30 line-through" : !isEndpoint ? "rounded-full hover:ring-2 hover:ring-primary" : ""}`}
+            <div className="cal-dots bg-cal-body px-3 pb-3 pt-1.5">
+              <div className="mb-2 grid grid-cols-2 gap-2">
+                {[
+                  { label: "Start", value: pickStart, active: !pickStart },
+                  { label: "End", value: pickEnd, active: !!pickStart && !pickEnd },
+                ].map((step) => (
+                  <div
+                    key={step.label}
+                    className={`rounded-field border-2 bg-cal-cell px-2.5 py-1 transition-colors ${
+                      step.active ? "border-primary" : step.value ? "border-transparent" : "border-dashed border-cal-pill"
+                    }`}
                   >
-                    {isEndpoint ? (
-                      <span className={`mx-auto flex h-6 w-6 items-center justify-center rounded-full bg-primary font-extrabold text-primary-foreground`}>
-                        {date.getUTCDate()}
-                      </span>
-                    ) : (
-                      date.getUTCDate()
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-            <div className="mt-3 flex items-center justify-between gap-2 border-t border-dashed border-line pt-3">
-              <span className="text-xs font-bold text-muted-foreground">
-                {pickedWeekCount > 0 ? `${pickedWeekCount} ${pickedWeekCount === 1 ? "week" : "weeks"}` : ""}
-              </span>
-              <div className="flex gap-2">
-                <Button type="button" variant="secondary" onClick={cancelPicking} disabled={!pickStart} className="px-3 py-1.5 text-xs">
-                  Clear
-                </Button>
-                <Button type="button" variant="primary" onClick={confirmRange} disabled={!pickEnd} className="px-3 py-1.5 text-xs">
-                  Add weeks
-                </Button>
+                    <div className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">{step.label}</div>
+                    <div className={`text-sm font-extrabold ${step.value ? "text-foreground" : step.active ? "text-primary" : "text-muted-foreground"}`}>
+                      {step.value ? formatShortDate(step.value) : step.active ? "Pick a date" : "—"}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-7 gap-1 text-center">
+                {WEEKDAY_LABELS.map((label) => (
+                  <span key={label} className="rounded-full bg-cal-pill py-0.5 text-[10px] font-extrabold text-cal-pill-ink">
+                    {label}
+                  </span>
+                ))}
+                {calendarDays.map((date) => {
+                  const dateStr = formatDate(date);
+                  const inCurrentMonth = date.getUTCMonth() === viewDate.getUTCMonth();
+                  const inRange = !!rangeLo && !!rangeHi && dateStr >= rangeLo && dateStr <= rangeHi;
+                  const isEndpoint = dateStr === rangeLo || dateStr === rangeHi;
+                  const isPast = dateStr < today;
+                  const isToday = dateStr === today;
+
+                  const tile = isEndpoint
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : inRange
+                      ? "bg-primary-soft text-cal-cell-ink ring-1 ring-primary/40"
+                      : isPast
+                        ? "bg-cal-cell/60 text-muted-foreground"
+                        : `bg-cal-cell shadow-sm hover:ring-2 hover:ring-primary ${inCurrentMonth ? "text-cal-cell-ink" : "text-muted-foreground"}`;
+
+                  return (
+                    <button
+                      key={dateStr}
+                      type="button"
+                      disabled={isPast}
+                      title={isPast ? "Past dates can't be added" : undefined}
+                      aria-pressed={isEndpoint}
+                      onMouseEnter={() => !isPast && setHoverDate(dateStr)}
+                      onClick={() => handleDayClick(date)}
+                      className={`relative flex h-9 flex-col items-center rounded-lg pt-1.5 text-sm font-extrabold tabular-nums transition-colors disabled:cursor-not-allowed ${tile}`}
+                    >
+                      {date.getUTCDate()}
+                      {isToday && !isEndpoint && (
+                        <span aria-hidden className="absolute bottom-1 h-1 w-1 rounded-full bg-accent" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="mt-2.5 flex items-center justify-between gap-2 rounded-full bg-cal-cell/80 py-1 pl-3 pr-1">
+                <span className="text-xs font-bold text-muted-foreground">
+                  {pickedWeekCount > 0 ? `${pickedWeekCount} ${pickedWeekCount === 1 ? "week" : "weeks"}` : "Pick a start and end"}
+                </span>
+                <div className="flex gap-2">
+                  <Button type="button" variant="secondary" onClick={cancelPicking} disabled={!pickStart} className="px-3 py-1.5 text-xs">
+                    Clear
+                  </Button>
+                  <Button type="button" variant="primary" onClick={confirmRange} disabled={!pickEnd} className="px-3 py-1.5 text-xs">
+                    Add weeks
+                  </Button>
+                </div>
               </div>
             </div>
           </MenuPanel>

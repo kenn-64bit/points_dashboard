@@ -6,6 +6,8 @@ import { Button } from "@/components/common/Button";
 import { Panel } from "@/components/common/Panel";
 import { LeafMark } from "@/components/common/LeafMark";
 import { Label, inputClasses } from "@/components/common/Field";
+import { stripDisallowed } from "@/lib/text";
+import { MAX_EMAIL_LENGTH, MAX_PASSWORD_LENGTH } from "@/lib/validation";
 
 export function LoginForm({ next }: { next: string }) {
   const router = useRouter();
@@ -53,7 +55,8 @@ export function LoginForm({ next }: { next: string }) {
             autoFocus
             required
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => setEmail(stripDisallowed(e.target.value))}
+            maxLength={MAX_EMAIL_LENGTH}
             className={inputClasses}
           />
         </div>
@@ -66,6 +69,7 @@ export function LoginForm({ next }: { next: string }) {
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            maxLength={MAX_PASSWORD_LENGTH}
             className={inputClasses}
           />
         </div>

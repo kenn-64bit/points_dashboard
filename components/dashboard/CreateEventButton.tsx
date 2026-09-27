@@ -9,6 +9,7 @@ import {
   EMPTY_EVENT_FORM,
   EventFormFields,
   eventFormPayload,
+  isEventFormValid,
   type EventFormValues,
 } from "@/components/dashboard/EventFormFields";
 
@@ -27,7 +28,7 @@ export function CreateEventButton({ variant = "pill" }: { variant?: "pill" | "ro
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!values.name.trim()) return;
+    if (!isEventFormValid(values)) return;
 
     setSubmitting(true);
     try {
@@ -78,7 +79,7 @@ export function CreateEventButton({ variant = "pill" }: { variant?: "pill" | "ro
               <Button type="button" variant="ghost" onClick={closeModal} disabled={submitting}>
                 Cancel
               </Button>
-              <Button type="submit" variant="primary" disabled={submitting || !values.name.trim()}>
+              <Button type="submit" variant="primary" disabled={submitting || !isEventFormValid(values)}>
                 {submitting ? "Creating…" : "Create Event"}
               </Button>
             </div>

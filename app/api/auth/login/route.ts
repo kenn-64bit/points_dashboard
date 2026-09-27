@@ -4,10 +4,7 @@ import { errorResponse } from "@/lib/apiError";
 import { DUMMY_HASH, verifyPassword } from "@/lib/auth/password";
 import { SESSION_COOKIE, sessionCookieOptions, signSession } from "@/lib/auth/session";
 import type { AppUserRole } from "@/types";
-
-const MAX_EMAIL_LENGTH = 254;
-// Bounds the scrypt work a single request can trigger.
-const MAX_PASSWORD_LENGTH = 1024;
+import { MAX_EMAIL_LENGTH, MAX_PASSWORD_LENGTH } from "@/lib/validation";
 
 const INVALID_CREDENTIALS = "Invalid email or password";
 

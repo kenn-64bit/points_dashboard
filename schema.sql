@@ -8,13 +8,15 @@ create extension if not exists pgcrypto;
 -- created via CSV/Excel bulk import, which supplies a username and nothing else.
 create table users (
   discord_id       text primary key,
-  discord_username text not null unique,
+  -- Length limits match lib/validation.ts; the API also strips invisible
+  -- characters and rejects < > { } ` \ before anything reaches the table.
+  discord_username text not null unique check (char_length(discord_username) between 1 and 32),
   created_at       timestamptz not null default now()
 );
 
 create table events (
   event_id    uuid primary key default gen_random_uuid(),
-  event_name  text not null,
+  event_name  text not null check (char_length(event_name) between 1 and 60),
   -- Keep in sync with EVENT_TYPES in types/index.ts.
   event_type  text not null default 'other'
     check (event_type in ('game_night', 'tournament', 'challenge', 'giveaway', 'community', 'other')),
@@ -88,3 +90,12 @@ alter table app_users enable row level security;
 --     add column event_type text not null default 'other'
 --       check (event_type in ('game_night', 'tournament', 'challenge', 'giveaway', 'community', 'other')),
 --     add column description text check (char_length(description) <= 500);
+
+-- Migration for projects created before the text limits (2026-09-27). `not
+-- valid` skips checking existing rows, so older, longer names don't block it;
+-- every new insert and update is checked. Safe to run once:
+--
+--   alter table events
+--     add constraint events_event_name_length check (char_length(event_name) between 1 and 60) not valid;
+--   alter table users
+--     add constraint users_discord_username_length check (char_length(discord_username) between 1 and 32) not valid;

@@ -6,17 +6,23 @@ import { useToast } from "@/components/common/Toast";
 import { Modal } from "@/components/common/Modal";
 import { Button } from "@/components/common/Button";
 import { inputClasses } from "@/components/common/Field";
-import { formatWeekRange } from "@/lib/week";
+import { IconButton } from "@/components/common/IconButton";
+import { UserPlusIcon } from "@/components/common/icons";
+import { formatWeekLabel } from "@/lib/week";
+import { stripDisallowed } from "@/lib/text";
+import { MAX_USERNAME_LENGTH } from "@/lib/validation";
 
 type NameRow = { id: number; name: string };
 
 export function AddParticipantsButton({
   eventId,
   week,
+  weekNumber,
   onAdded,
 }: {
   eventId: string;
   week: string;
+  weekNumber: number;
   onAdded: () => void;
 }) {
   const router = useRouter();
@@ -89,16 +95,16 @@ export function AddParticipantsButton({
 
   return (
     <>
-      <Button variant="secondary" onClick={() => setOpen(true)}>
-        Add Participants
-      </Button>
+      <IconButton label="Add participants" onClick={() => setOpen(true)}>
+        <UserPlusIcon />
+      </IconButton>
 
       {open && (
         <Modal maxWidth="max-w-md">
           <h3 className="text-lg font-extrabold text-foreground">Add Participants</h3>
           <p className="mt-1 text-sm text-muted-foreground">
-            Added to <span className="font-bold text-foreground">{formatWeekRange(week)}</span> with 0 points.
-            New usernames are created automatically.
+            Adding to <span className="font-bold text-foreground">{formatWeekLabel(weekNumber, week)}</span>. New
+            usernames are created automatically.
           </p>
 
           <form
@@ -117,7 +123,7 @@ export function AddParticipantsButton({
                     }}
                     type="text"
                     value={row.name}
-                    onChange={(e) => updateRow(row.id, e.target.value)}
+                    onChange={(e) => updateRow(row.id, stripDisallowed(e.target.value))}
                     onKeyDown={(e) => {
                       // Enter on the last row starts a new one instead of submitting.
                       if (e.key === "Enter" && idx === rows.length - 1 && row.name.trim()) {
@@ -125,6 +131,7 @@ export function AddParticipantsButton({
                         addRow();
                       }
                     }}
+                    maxLength={MAX_USERNAME_LENGTH}
                     placeholder="Discord username"
                     aria-label={`Participant ${idx + 1} name`}
                     autoFocus={idx === 0}

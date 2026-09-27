@@ -5,19 +5,23 @@ import { useRouter } from "next/navigation";
 import { useToast } from "@/components/common/Toast";
 import { Modal } from "@/components/common/Modal";
 import { Button } from "@/components/common/Button";
+import { IconButton } from "@/components/common/IconButton";
+import { UploadIcon } from "@/components/common/icons";
 import { Badge } from "@/components/common/Badge";
 import { inputClasses } from "@/components/common/Field";
 import { hasAllowedExtension, isWithinMaxSize, ALLOWED_IMPORT_EXTENSIONS } from "@/lib/validation";
-import { formatWeekRange } from "@/lib/week";
+import { formatWeekLabel } from "@/lib/week";
 import type { BulkImportResult } from "@/types";
 
 export function BulkImportButton({
   eventId,
   week,
+  weekNumber,
   onImported,
 }: {
   eventId: string;
   week: string;
+  weekNumber: number;
   onImported: () => void;
 }) {
   const router = useRouter();
@@ -87,15 +91,15 @@ export function BulkImportButton({
 
   return (
     <>
-      <Button variant="secondary" onClick={() => setOpen(true)}>
-        Import CSV/Excel
-      </Button>
+      <IconButton label="Import CSV/Excel" onClick={() => setOpen(true)}>
+        <UploadIcon />
+      </IconButton>
 
       {open && (
         <Modal maxWidth="max-w-lg">
           <h3 className="text-lg font-extrabold text-foreground">Import Users &amp; Points</h3>
           <p className="mt-1 text-sm text-muted-foreground">
-            Upload a .csv or .xlsx file for <span className="font-bold text-foreground">{formatWeekRange(week)}</span>.
+            Upload a .csv or .xlsx file for <span className="font-bold text-foreground">{formatWeekLabel(weekNumber, week)}</span>.
             New usernames are created automatically.
           </p>
 

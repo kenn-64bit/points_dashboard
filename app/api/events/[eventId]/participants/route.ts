@@ -3,7 +3,7 @@ import { getSupabaseAdmin } from "@/lib/supabase";
 import { resolveDiscordId, resolveDiscordIdsBatch } from "@/lib/users";
 import { errorResponse, unauthorizedResponse } from "@/lib/apiError";
 import { getCurrentUser } from "@/lib/auth/dal";
-import { isValidUUID, isValidDateStr, MAX_USERNAME_LENGTH } from "@/lib/validation";
+import { isValidUUID, isValidDateStr, parseUsername } from "@/lib/validation";
 import { isMonday } from "@/lib/week";
 import { DAY_COLUMNS } from "@/types";
 
@@ -30,11 +30,15 @@ export async function POST(request: NextRequest, { params }: Params) {
       return NextResponse.json({ error: "usernames must be a list of names" }, { status: 400 });
     }
 
-    // Trim, drop blanks, and dedupe case-insensitively (first spelling wins).
+    // Clean each name (lib/text.ts), drop blanks, and dedupe
+    // case-insensitively (first spelling wins).
     const byKey = new Map<string, string>();
     for (const raw of usernames as string[]) {
-      const name = raw.trim();
-      if (name && !byKey.has(name.toLowerCase())) byKey.set(name.toLowerCase(), name);
+      if (!raw.trim()) continue;
+      const parsed = parseUsername(raw);
+      if ("error" in parsed) return NextResponse.json({ error: parsed.error }, { status: 400 });
+      const key = parsed.name.toLowerCase();
+      if (!byKey.has(key)) byKey.set(key, parsed.name);
     }
     const names = [...byKey.values()];
 
@@ -44,13 +48,6 @@ export async function POST(request: NextRequest, { params }: Params) {
     if (names.length > MAX_PARTICIPANTS_PER_REQUEST) {
       return NextResponse.json(
         { error: `Too many names. Max ${MAX_PARTICIPANTS_PER_REQUEST} at a time.` },
-        { status: 400 }
-      );
-    }
-    const tooLong = names.find((n) => n.length > MAX_USERNAME_LENGTH);
-    if (tooLong) {
-      return NextResponse.json(
-        { error: `"${tooLong.slice(0, 20)}…" is too long. Max ${MAX_USERNAME_LENGTH} characters.` },
         { status: 400 }
       );
     }

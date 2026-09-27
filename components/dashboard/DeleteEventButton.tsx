@@ -3,7 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useToast } from "@/components/common/Toast";
-import { Button } from "@/components/common/Button";
+import { IconButton } from "@/components/common/IconButton";
+import { TrashIcon } from "@/components/common/icons";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 
 export function DeleteEventButton({ eventId, eventName }: { eventId: string; eventName: string }) {
@@ -31,9 +32,9 @@ export function DeleteEventButton({ eventId, eventName }: { eventId: string; eve
 
   return (
     <>
-      <Button variant="destructive" onClick={() => setOpen(true)}>
-        Delete Event
-      </Button>
+      <IconButton label="Delete event" tone="danger" tooltipAlign="end" onClick={() => setOpen(true)}>
+        <TrashIcon />
+      </IconButton>
 
       {open && (
         <ConfirmDialog

@@ -6,7 +6,8 @@ import type { Event, EventType } from "@/types";
 import { Label, inputClasses } from "@/components/common/Field";
 import { MenuItem, MenuList, MenuPanel, SelectTrigger } from "@/components/common/Select";
 import { EventTypeIcon, PASS_CLASSES, eventTypeOf } from "@/components/dashboard/eventType";
-import { MAX_EVENT_DESCRIPTION_LENGTH } from "@/lib/validation";
+import { MAX_EVENT_DESCRIPTION_LENGTH, MAX_EVENT_NAME_LENGTH } from "@/lib/validation";
+import { BLOCKED_CHARS_LABEL, cleanText, stripDisallowed } from "@/lib/text";
 
 export interface EventFormValues {
   name: string;
@@ -23,10 +24,33 @@ export function eventFormValuesOf(event: Event): EventFormValues {
 // Request body for POST /api/events and PUT /api/events/[id].
 export function eventFormPayload(values: EventFormValues) {
   return {
-    event_name: values.name.trim(),
+    event_name: cleanText(values.name),
     event_type: values.type,
-    description: values.description.trim() || null,
+    description: cleanText(values.description, { multiline: true }) || null,
   };
+}
+
+// Whether the form can be submitted: a name, within the limit once cleaned.
+// (An older event can load with a name longer than today's limit.)
+export function isEventFormValid(values: EventFormValues): boolean {
+  const name = cleanText(values.name);
+  return name.length > 0 && name.length <= MAX_EVENT_NAME_LENGTH;
+}
+
+function LengthCounter({ length, max }: { length: number; max: number }) {
+  return (
+    <span className={`text-xs tabular-nums ${length > max ? "font-bold text-danger" : "text-muted-foreground"}`}>
+      {length}/{max}
+    </span>
+  );
+}
+
+function StrippedHint() {
+  return (
+    <p className="mt-1 text-xs text-muted-foreground">
+      {BLOCKED_CHARS_LABEL} and hidden characters aren&apos;t allowed.
+    </p>
+  );
 }
 
 function TypeSwatch({ type }: { type: EventType }) {
@@ -48,6 +72,8 @@ export function EventFormFields({
   disabled?: boolean;
 }) {
   const [typeMenuOpen, setTypeMenuOpen] = useState(false);
+  // Which field last had characters removed as the user typed or pasted.
+  const [strippedField, setStrippedField] = useState<"name" | "description" | null>(null);
   const typeMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -64,16 +90,25 @@ export function EventFormFields({
   return (
     <>
       <div>
-        <Label htmlFor="event-name">Event name</Label>
+        <div className="flex items-baseline justify-between">
+          <Label htmlFor="event-name">Event name</Label>
+          <LengthCounter length={values.name.length} max={MAX_EVENT_NAME_LENGTH} />
+        </div>
         <input
           id="event-name"
           autoFocus
           value={values.name}
-          onChange={(e) => onChange({ ...values, name: e.target.value })}
+          onChange={(e) => {
+            const name = stripDisallowed(e.target.value);
+            setStrippedField(name.length < e.target.value.normalize("NFC").length ? "name" : null);
+            onChange({ ...values, name });
+          }}
           disabled={disabled}
+          maxLength={MAX_EVENT_NAME_LENGTH}
           placeholder="e.g. September Gaming Night"
           className={inputClasses}
         />
+        {strippedField === "name" && <StrippedHint />}
       </div>
 
       <div>
@@ -116,20 +151,23 @@ export function EventFormFields({
       <div>
         <div className="flex items-baseline justify-between">
           <Label htmlFor="event-description">Description (optional)</Label>
-          <span className="text-xs tabular-nums text-muted-foreground">
-            {values.description.length}/{MAX_EVENT_DESCRIPTION_LENGTH}
-          </span>
+          <LengthCounter length={values.description.length} max={MAX_EVENT_DESCRIPTION_LENGTH} />
         </div>
         <textarea
           id="event-description"
           value={values.description}
-          onChange={(e) => onChange({ ...values, description: e.target.value })}
+          onChange={(e) => {
+            const description = stripDisallowed(e.target.value, { multiline: true });
+            setStrippedField(description.length < e.target.value.normalize("NFC").replace(/\r\n/g, "\n").length ? "description" : null);
+            onChange({ ...values, description });
+          }}
           disabled={disabled}
           maxLength={MAX_EVENT_DESCRIPTION_LENGTH}
           rows={3}
           placeholder="What's this event about?"
           className={`${inputClasses} resize-none`}
         />
+        {strippedField === "description" && <StrippedHint />}
       </div>
     </>
   );

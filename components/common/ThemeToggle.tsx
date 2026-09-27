@@ -36,7 +36,10 @@ export function ThemeToggle() {
       aria-checked={isDark}
       aria-label="Night mode"
       title={isDark ? "Switch to day" : "Switch to night"}
-      onClick={toggleTheme}
+      onClick={(e) => {
+        const r = e.currentTarget.getBoundingClientRect();
+        toggleTheme({ x: r.left + r.width / 2, y: r.top + r.height / 2 });
+      }}
       className="relative inline-flex h-8 w-14 shrink-0 items-center rounded-full border border-border bg-surface-muted px-0.5 transition-colors hover:bg-accent-soft"
     >
       <SunIcon className="absolute left-2 h-3.5 w-3.5 text-muted-foreground/50" />

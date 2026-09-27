@@ -59,6 +59,13 @@ export function formatWeekRange(mondayStr: string): string {
   return formatWeeksSpan(mondayStr, mondayStr);
 }
 
+// e.g. "Week 1 · Sep 21 - 27, 2026", where weekNumber is the week's position
+// in the event (1 = earliest). Falls back to the bare range without one.
+export function formatWeekLabel(weekNumber: number, mondayStr: string): string {
+  const range = formatWeekRange(mondayStr);
+  return weekNumber >= 1 ? `Week ${weekNumber} · ${range}` : range;
+}
+
 // Monday of the first week through Sunday of the last, in formatWeekRange's style.
 export function formatWeeksSpan(firstMondayStr: string, lastMondayStr: string): string {
   const monday = new Date(`${firstMondayStr}T00:00:00Z`);
