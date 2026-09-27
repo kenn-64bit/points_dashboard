@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { resolveDiscordId, resolveDiscordIdsBatch } from "@/lib/users";
-import { errorResponse, unauthorizedResponse } from "@/lib/apiError";
-import { getCurrentUser } from "@/lib/auth/dal";
+import { errorResponse } from "@/lib/apiError";
+import { requireApiUser } from "@/lib/auth/dal";
+import { canEdit } from "@/lib/auth/roles";
 import { isValidUUID, isValidDateStr, parseUsername } from "@/lib/validation";
 import { isMonday } from "@/lib/week";
 import { DAY_COLUMNS } from "@/types";
@@ -17,7 +18,8 @@ const MAX_PARTICIPANTS_PER_REQUEST = 100;
 // a row that already exists, so existing scores are preserved.
 export async function POST(request: NextRequest, { params }: Params) {
   try {
-    if (!(await getCurrentUser())) return unauthorizedResponse();
+    const user = await requireApiUser(canEdit);
+    if (user instanceof Response) return user;
     const { eventId } = await params;
     if (!isValidUUID(eventId)) return NextResponse.json({ error: "Invalid event id" }, { status: 400 });
 

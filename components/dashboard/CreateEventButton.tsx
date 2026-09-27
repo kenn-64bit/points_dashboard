@@ -57,7 +57,7 @@ export function CreateEventButton({ variant = "pill" }: { variant?: "pill" | "ro
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="flex w-full items-center gap-2 px-5 py-3 text-left text-sm font-extrabold text-primary transition-colors hover:bg-accent-soft"
+          className="flex w-full items-center gap-2 px-5 py-3 text-left text-sm font-extrabold text-primary-ink transition-colors hover:bg-accent-soft"
         >
           <span aria-hidden className="text-base leading-none">
             +

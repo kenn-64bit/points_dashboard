@@ -15,8 +15,8 @@ export default function GlobalError({ reset }: { error: Error & { digest?: strin
           alignItems: "center",
           justifyContent: "center",
           fontFamily: "ui-rounded, system-ui, sans-serif",
-          background: "#f4edd3",
-          color: "#5a4a32",
+          background: "#ebdfb6",
+          color: "#4a3b24",
         }}
       >
         <div
@@ -24,13 +24,13 @@ export default function GlobalError({ reset }: { error: Error & { digest?: strin
             maxWidth: 420,
             textAlign: "center",
             padding: 24,
-            background: "#fdf9ea",
-            border: "1px solid #e6dab4",
+            background: "#fffbee",
+            border: "1px solid #d8c38e",
             borderRadius: 28,
           }}
         >
           <h1 style={{ fontSize: 18, fontWeight: 800, marginBottom: 8 }}>Something went wrong</h1>
-          <p style={{ fontSize: 14, color: "#7a6746", marginBottom: 16 }}>
+          <p style={{ fontSize: 14, color: "#6b5634", marginBottom: 16 }}>
             An unexpected error occurred. Reloading usually fixes this.
           </p>
           <button
@@ -39,8 +39,8 @@ export default function GlobalError({ reset }: { error: Error & { digest?: strin
               padding: "8px 16px",
               borderRadius: 999,
               border: "none",
-              background: "#136a60",
-              color: "#fdf9ea",
+              background: "#a9d2bd",
+              color: "#1d4337",
               cursor: "pointer",
               fontSize: 14,
               fontWeight: 700,

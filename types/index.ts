@@ -129,9 +129,17 @@ export interface ApiError {
   error: string;
 }
 
-export type AppUserRole = "admin" | "member";
+// Keep in sync with APP_USER_ROLES in lib/auth/roles.ts and schema.sql.
+export type AppUserRole = "admin" | "editor" | "viewer";
 
 export interface SessionUser {
   email: string;
   role: AppUserRole;
+}
+
+// A roster row as the Team page sees it — never includes password_hash.
+export interface TeamMember {
+  email: string;
+  role: AppUserRole;
+  created_at: string;
 }

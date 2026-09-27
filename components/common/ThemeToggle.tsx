@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import { useTheme } from "@/components/common/ThemeProvider";
 
 function SunIcon({ className }: { className: string }) {
@@ -28,6 +29,7 @@ function MoonIcon({ className }: { className: string }) {
 export function ThemeToggle() {
   const { theme, toggleTheme } = useTheme();
   const isDark = theme === "dark";
+  const knobRef = useRef<HTMLSpanElement>(null);
 
   return (
     <button
@@ -37,14 +39,20 @@ export function ThemeToggle() {
       aria-label="Night mode"
       title={isDark ? "Switch to day" : "Switch to night"}
       onClick={(e) => {
-        const r = e.currentTarget.getBoundingClientRect();
-        toggleTheme({ x: r.left + r.width / 2, y: r.top + r.height / 2 });
+        // Reveal from where the knob lands. Measured at click time (the switch
+        // moves between pages and breakpoints) from layout offsets, which
+        // ignore the slide transform, so a mid-slide click still lands right.
+        const btn = e.currentTarget;
+        const knob = knobRef.current;
+        const r = btn.getBoundingClientRect();
+        const inset = knob ? btn.clientLeft + knob.offsetLeft + knob.offsetWidth / 2 : r.width / 2;
+        toggleTheme({ x: isDark ? r.left + inset : r.right - inset, y: r.top + r.height / 2 });
       }}
-      className="relative inline-flex h-8 w-14 shrink-0 items-center rounded-full border border-border bg-surface-muted px-0.5 transition-colors hover:bg-accent-soft"
+      className="relative inline-flex h-8 w-14 shrink-0 items-center rounded-full border border-control-border bg-control px-0.5 transition-colors hover:bg-accent-soft"
     >
       <SunIcon className="absolute left-2 h-3.5 w-3.5 text-muted-foreground/50" />
       <MoonIcon className="absolute right-2 h-3.5 w-3.5 text-muted-foreground/50" />
-      <span className="relative flex h-6.5 w-6.5 items-center justify-center rounded-full border border-border bg-surface shadow-sm transition-transform duration-200 ease-out dark:translate-x-6">
+      <span ref={knobRef} className="relative flex h-6.5 w-6.5 items-center justify-center rounded-full border border-border bg-surface shadow-sm transition-transform duration-200 ease-out dark:translate-x-6">
         <SunIcon className="h-4 w-4 text-accent-ink dark:hidden" />
         <MoonIcon className="hidden h-4 w-4 text-accent-ink dark:block" />
       </span>

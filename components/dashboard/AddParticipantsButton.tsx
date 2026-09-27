@@ -95,7 +95,7 @@ export function AddParticipantsButton({
 
   return (
     <>
-      <IconButton label="Add participants" onClick={() => setOpen(true)}>
+      <IconButton label="Add participants" tone="primary" onClick={() => setOpen(true)}>
         <UserPlusIcon />
       </IconButton>
 
@@ -144,7 +144,7 @@ export function AddParticipantsButton({
                       onClick={() => removeRow(row.id)}
                       disabled={submitting}
                       aria-label={`Remove participant ${idx + 1}`}
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-lg font-bold text-muted-foreground transition-colors hover:bg-danger-soft hover:text-danger disabled:opacity-50"
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-lg font-bold text-muted-foreground transition-colors hover:bg-danger-soft hover:text-danger-ink disabled:opacity-50"
                     >
                       ×
                     </button>

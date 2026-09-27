@@ -35,12 +35,13 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
-      <div className="pointer-events-none fixed bottom-4 right-4 z-50 flex flex-col gap-2">
+      {/* Top-center, where the eye already is while editing — not tucked in a corner. */}
+      <div className="pointer-events-none fixed inset-x-4 top-6 z-50 flex flex-col items-center gap-2">
         {toasts.map((t) => (
           <div
             key={t.id}
             role={t.kind === "error" ? "alert" : "status"}
-            className={`pointer-events-auto rounded-full px-4 py-2 text-sm font-bold shadow-panel ${
+            className={`toast-in pointer-events-auto max-w-md rounded-full px-5 py-2.5 text-center text-sm font-bold shadow-panel ${
               t.kind === "success" ? "bg-primary text-primary-foreground" : "bg-danger text-danger-foreground"
             }`}
           >

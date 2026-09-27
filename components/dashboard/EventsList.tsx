@@ -1,13 +1,19 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useState } from "react";
 import type { Event } from "@/types";
 import { CreateEventButton } from "@/components/dashboard/CreateEventButton";
-import { EventPassModal } from "@/components/dashboard/EventPassModal";
+import { useCanEdit } from "@/components/auth/RoleProvider";
 import { EventTypePill, eventTypeOf } from "@/components/dashboard/eventType";
 import { Panel } from "@/components/common/Panel";
 import { Badge } from "@/components/common/Badge";
 import { ChevronDownIcon } from "@/components/common/Select";
+
+// Loaded on first open, so its code isn't part of the page's initial JS.
+const EventPassModal = dynamic(() => import("@/components/dashboard/EventPassModal").then((m) => m.EventPassModal), {
+  ssr: false,
+});
 
 function formatMonthLabel(month: string): string {
   const parsed = new Date(`${month}-01T00:00:00Z`);
@@ -18,6 +24,7 @@ function formatMonthLabel(month: string): string {
 export function EventsList({ events }: { events: Event[] }) {
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [passEvent, setPassEvent] = useState<Event | null>(null);
+  const editable = useCanEdit();
 
   const groups = new Map<string, Event[]>();
   for (const event of events) {
@@ -43,7 +50,7 @@ export function EventsList({ events }: { events: Event[] }) {
         bodyClassName="divide-y divide-border"
       >
         {events.length === 0 && (
-          <p className="px-5 py-4 text-sm text-muted-foreground">No events yet — create one below.</p>
+          <p className="px-5 py-4 text-sm text-muted-foreground">{editable ? "No events yet — create one below." : "No events yet."}</p>
         )}
         {months.map((month) => {
           const isOpen = !collapsed.has(month);
@@ -77,7 +84,7 @@ export function EventsList({ events }: { events: Event[] }) {
                       <EventTypePill type={eventTypeOf(event)} />
                       <span
                         aria-hidden
-                        className="flex h-6 w-6 items-center justify-center rounded-full bg-surface-muted font-bold text-muted-foreground transition-transform duration-150 group-hover:translate-x-0.5"
+                        className="flex h-6 w-6 items-center justify-center rounded-full bg-surface-muted font-bold text-muted-foreground transition-[background-color,color,transform] duration-150 group-hover:translate-x-0.5 group-hover:bg-primary group-hover:text-primary-foreground"
                       >
                         ›
                       </span>
@@ -87,7 +94,7 @@ export function EventsList({ events }: { events: Event[] }) {
             </div>
           );
         })}
-        <CreateEventButton variant="row" />
+        {editable && <CreateEventButton variant="row" />}
       </Panel>
       {passEvent && (
         <EventPassModal event={passEvent} onClose={() => setPassEvent(null)} onUpdated={setPassEvent} />

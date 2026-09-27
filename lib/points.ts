@@ -27,3 +27,11 @@ export function computeLeaderboard(rows: PointsRowWithUser[]): LeaderboardRow[] 
     return { ...entry, rank };
   });
 }
+
+const ORDINAL_RULES = new Intl.PluralRules("en-US", { type: "ordinal" });
+const ORDINAL_SUFFIXES: Partial<Record<Intl.LDMLPluralRule, string>> = { one: "st", two: "nd", few: "rd" };
+
+// 1 → "1st", 2 → "2nd", 11 → "11th", 23 → "23rd".
+export function ordinal(n: number): string {
+  return `${n}${ORDINAL_SUFFIXES[ORDINAL_RULES.select(n)] ?? "th"}`;
+}

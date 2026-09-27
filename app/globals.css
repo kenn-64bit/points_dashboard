@@ -13,26 +13,36 @@
 [data-theme="light"] {
   color-scheme: light;
 
-  --background: #f4edd3;
-  --surface: #fdf9ea;
-  --surface-muted: #f5eed6;
-  --border: #e6dab4;
-  --line: #d6c79c;
+  --background: #ebdfb6;
+  --surface: #fffbee;
+  --surface-muted: #f5e9c6;
+  --border: #d8c38e;
+  --line: #c9b27a;
 
-  --foreground: #5a4a32;
-  --muted-foreground: #7a6746;
+  /* Neutral buttons, triggers and inputs: brighter than the page, with an
+     outline that still reads against the sand. */
+  --control: #fffdf6;
+  --control-border: #b39a63;
 
-  --primary: #136a60;
-  --primary-foreground: #fdf9ea;
-  --primary-soft: rgba(19, 106, 96, 0.14);
+  --foreground: #4a3b24;
+  --muted-foreground: #6b5634;
 
-  --accent: #f2a04e;
-  --accent-foreground: #4a3014;
-  --accent-ink: #a3530e;
-  --accent-soft: rgba(242, 160, 78, 0.16);
+  /* Day roles are pastel fills with a deep ink of the same hue: `<role>`
+     is the fill, `-foreground` the text on it, `-ink` text/icons/focus on a
+     surface, `-soft` a pale tint (solid: translucent ones turn muddy over
+     the sand). */
+  --primary: #a9d2bd;
+  --primary-foreground: #1d4337;
+  --primary-ink: #2a6655;
+  --primary-soft: #dcede1;
 
-  --total: #7d7330;
-  --total-foreground: #fdf9ea;
+  --accent: #f8c98f;
+  --accent-foreground: #5a3410;
+  --accent-ink: #9a4a08;
+  --accent-soft: #fbdcb3;
+
+  --total: #ddd394;
+  --total-foreground: #474013;
 
   --leaf: #5aa55a;
 
@@ -52,12 +62,13 @@
   --cal-cell: #fffdf6;
   --cal-cell-ink: #5b4a86;
 
-  --danger: #a33524;
-  --danger-foreground: #fdf9ea;
-  --danger-soft: rgba(163, 53, 36, 0.12);
+  --danger: #efbfb3;
+  --danger-foreground: #6b2317;
+  --danger-ink: #9a3d2e;
+  --danger-soft: #f7ddd5;
 
   --overlay: rgba(59, 47, 31, 0.4);
-  --shadow: rgba(90, 74, 50, 0.12);
+  --shadow: rgba(90, 74, 50, 0.18);
 
   /* Event pass cards, one pastel per event type. `-ink` is the text and
      decoration on that card (all pairs ≥ 6:1). */
@@ -85,11 +96,16 @@
   --border: rgba(243, 236, 214, 0.1);
   --line: rgba(243, 236, 214, 0.2);
 
+  --control: #2a3150;
+  --control-border: rgba(243, 236, 214, 0.1);
+
   --foreground: #f3ecd6;
   --muted-foreground: #b4ac96;
 
+  /* Night fills are bright enough to be their own ink. */
   --primary: #3fcfbc;
   --primary-foreground: #10192b;
+  --primary-ink: #3fcfbc;
   --primary-soft: rgba(63, 207, 188, 0.18);
 
   --accent: #f5a54a;
@@ -117,6 +133,7 @@
 
   --danger: #f07a6e;
   --danger-foreground: #10192b;
+  --danger-ink: #f07a6e;
   --danger-soft: rgba(240, 122, 110, 0.16);
 
   --overlay: rgba(5, 8, 18, 0.6);
@@ -143,11 +160,15 @@
   --color-border: var(--border);
   --color-line: var(--line);
 
+  --color-control: var(--control);
+  --color-control-border: var(--control-border);
+
   --color-foreground: var(--foreground);
   --color-muted-foreground: var(--muted-foreground);
 
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-primary-ink: var(--primary-ink);
   --color-primary-soft: var(--primary-soft);
 
   --color-accent: var(--accent);
@@ -173,6 +194,7 @@
 
   --color-danger: var(--danger);
   --color-danger-foreground: var(--danger-foreground);
+  --color-danger-ink: var(--danger-ink);
   --color-danger-soft: var(--danger-soft);
 
   --color-overlay: var(--overlay);
@@ -212,7 +234,7 @@
   }
 
   :focus-visible {
-    outline: 2px solid var(--primary);
+    outline: 2px solid var(--primary-ink);
     outline-offset: 2px;
   }
 
@@ -279,6 +301,17 @@
 @utility cal-dots {
   background-image: radial-gradient(var(--cal-dot) 1.5px, transparent 1.75px);
   background-size: 12px 12px;
+}
+
+/* Toasts drop in from above; reduced motion is handled by the rule below. */
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-0.75rem) scale(0.96);
+  }
+}
+@utility toast-in {
+  animation: toast-in 0.2s ease-out;
 }
 
 /* Theme switch: the new theme is revealed by a circle growing from the

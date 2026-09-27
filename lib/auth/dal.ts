@@ -2,8 +2,10 @@ import "server-only";
 import { cache } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import type { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { SESSION_COOKIE, verifySession } from "@/lib/auth/session";
+import { forbiddenResponse, unauthorizedResponse } from "@/lib/apiError";
 import type { AppUserRole, SessionUser } from "@/types";
 
 // The authoritative auth check. proxy.ts only verifies the cookie's signature;
@@ -29,5 +31,19 @@ export const getCurrentUser = cache(async (): Promise<SessionUser | null> => {
 export async function requirePageUser(): Promise<SessionUser> {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  return user;
+}
+
+// For route handlers: the signed-in user, or the 401/403 response to send
+// back. The role comes from the roster row read above, never the JWT, so a
+// role change applies on the user's next request.
+//   const user = await requireApiUser(canEdit);
+//   if (user instanceof Response) return user;
+export async function requireApiUser(
+  allowed?: (role: AppUserRole) => boolean
+): Promise<SessionUser | NextResponse> {
+  const user = await getCurrentUser();
+  if (!user) return unauthorizedResponse();
+  if (allowed && !allowed(user.role)) return forbiddenResponse();
   return user;
 }

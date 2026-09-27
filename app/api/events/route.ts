@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { errorResponse, unauthorizedResponse } from "@/lib/apiError";
-import { getCurrentUser } from "@/lib/auth/dal";
+import { getCurrentUser, requireApiUser } from "@/lib/auth/dal";
+import { canEdit } from "@/lib/auth/roles";
 import { parseEventInput } from "@/lib/validation";
 
 export async function GET() {
@@ -22,7 +23,8 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    if (!(await getCurrentUser())) return unauthorizedResponse();
+    const user = await requireApiUser(canEdit);
+    if (user instanceof Response) return user;
     const parsed = parseEventInput(await request.json());
     if ("error" in parsed) return NextResponse.json({ error: parsed.error }, { status: 400 });
 

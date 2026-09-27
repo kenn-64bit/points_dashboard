@@ -8,9 +8,11 @@ import { IconButton } from "@/components/common/IconButton";
 import { DownloadIcon } from "@/components/common/icons";
 import { MenuItem, MenuList, MenuPanel, SelectTrigger } from "@/components/common/Select";
 
+// `weeks` are oldest first; the single-week export defaults to the latest.
 export function ExportEventButton({ eventId, weeks }: { eventId: string; weeks: string[] }) {
   const [open, setOpen] = useState(false);
-  const [selectedWeek, setSelectedWeek] = useState(weeks[0] ?? "");
+  const [pickedWeek, setPickedWeek] = useState<string | null>(null);
+  const selectedWeek = pickedWeek && weeks.includes(pickedWeek) ? pickedWeek : (weeks.at(-1) ?? "");
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -27,7 +29,7 @@ export function ExportEventButton({ eventId, weeks }: { eventId: string; weeks: 
 
   return (
     <>
-      <IconButton label="Export event data" onClick={() => setOpen(true)}>
+      <IconButton label="Export event data" tone="primary" onClick={() => setOpen(true)}>
         <DownloadIcon />
       </IconButton>
 
@@ -37,7 +39,7 @@ export function ExportEventButton({ eventId, weeks }: { eventId: string; weeks: 
 
           {weeks.length === 0 ? (
             <>
-              <p className="mt-3 text-sm text-muted-foreground">No points exist for this event yet.</p>
+              <p className="mt-3 text-sm text-muted-foreground">This event has no weeks yet.</p>
               <div className="mt-6 flex justify-end">
                 <Button variant="secondary" onClick={() => setOpen(false)}>
                   Close
@@ -62,7 +64,7 @@ export function ExportEventButton({ eventId, weeks }: { eventId: string; weeks: 
                               key={week}
                               selected={week === selectedWeek}
                               onSelect={() => {
-                                setSelectedWeek(week);
+                                setPickedWeek(week);
                                 setDropdownOpen(false);
                               }}
                             >

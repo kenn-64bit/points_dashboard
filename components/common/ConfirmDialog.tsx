@@ -3,7 +3,7 @@ import { Button } from "@/components/common/Button";
 
 function WarningIcon() {
   return (
-    <svg aria-hidden viewBox="0 0 24 24" fill="none" className="mt-0.5 h-8 w-8 shrink-0 text-danger">
+    <svg aria-hidden viewBox="0 0 24 24" fill="none" className="mt-0.5 h-8 w-8 shrink-0 text-danger-ink">
       <path
         d="M12 3.5 2 20.5h20L12 3.5Z"
         stroke="currentColor"
@@ -42,7 +42,7 @@ export function ConfirmDialog({
         <WarningIcon />
         <div>
           <h3 className="text-lg font-extrabold text-foreground">{title}</h3>
-          <p className="mt-1 text-sm text-muted-foreground">{children}</p>
+          <div className="mt-1 text-sm text-muted-foreground">{children}</div>
         </div>
       </div>
       <div className="mt-6 flex justify-end gap-2">

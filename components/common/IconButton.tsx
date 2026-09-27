@@ -1,16 +1,21 @@
 import Link from "next/link";
 import type { ButtonHTMLAttributes } from "react";
 
-type Tone = "neutral" | "danger";
+type Tone = "neutral" | "primary" | "danger";
 type TooltipAlign = "center" | "end";
 
+// Quiet at rest: every tone starts as a neutral control, and `primary` /
+// `danger` show their role color only on hover.
 const TONE_CLASSES: Record<Tone, string> = {
-  neutral: "border border-border bg-surface-muted text-foreground hover:bg-accent-soft",
-  danger: "bg-danger-soft text-danger hover:bg-danger hover:text-danger-foreground",
+  neutral: "border border-control-border bg-control text-foreground hover:bg-accent-soft",
+  primary:
+    "border border-control-border bg-control text-foreground hover:border-primary hover:bg-primary hover:text-primary-foreground",
+  danger:
+    "border border-control-border bg-control text-danger-ink hover:border-danger hover:bg-danger hover:text-danger-foreground",
 };
 
 function iconButtonClasses(tone: Tone, className: string): string {
-  return `group relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-[background-color,color,transform] duration-150 ease-out active:translate-y-px disabled:cursor-not-allowed disabled:opacity-50 ${TONE_CLASSES[tone]} ${className}`;
+  return `group relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-[background-color,border-color,color,transform] duration-150 ease-out active:translate-y-px disabled:cursor-not-allowed disabled:opacity-50 ${TONE_CLASSES[tone]} ${className}`;
 }
 
 // The action's name, floating above the icon on hover or keyboard focus. The

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { errorResponse, unauthorizedResponse } from "@/lib/apiError";
-import { getCurrentUser } from "@/lib/auth/dal";
+import { getCurrentUser, requireApiUser } from "@/lib/auth/dal";
+import { canEdit } from "@/lib/auth/roles";
 import { isValidUUID, parseEventInput } from "@/lib/validation";
 
 type Params = { params: Promise<{ eventId: string }> };
@@ -25,7 +26,8 @@ export async function GET(_request: NextRequest, { params }: Params) {
 
 export async function PUT(request: NextRequest, { params }: Params) {
   try {
-    if (!(await getCurrentUser())) return unauthorizedResponse();
+    const user = await requireApiUser(canEdit);
+    if (user instanceof Response) return user;
     const { eventId } = await params;
     if (!isValidUUID(eventId)) return NextResponse.json({ error: "Invalid event id" }, { status: 400 });
 
@@ -50,7 +52,8 @@ export async function PUT(request: NextRequest, { params }: Params) {
 
 export async function DELETE(_request: NextRequest, { params }: Params) {
   try {
-    if (!(await getCurrentUser())) return unauthorizedResponse();
+    const user = await requireApiUser(canEdit);
+    if (user instanceof Response) return user;
     const { eventId } = await params;
     if (!isValidUUID(eventId)) return NextResponse.json({ error: "Invalid event id" }, { status: 400 });
 

@@ -23,7 +23,7 @@ export function SelectTrigger({ open, children, className = "", ...props }: Sele
       type="button"
       aria-expanded={open}
       {...props}
-      className={`flex items-center gap-2 rounded-full border border-border bg-surface-muted px-3.5 py-2 text-sm font-bold text-foreground transition-colors hover:bg-accent-soft ${className}`}
+      className={`flex items-center gap-2 rounded-full border border-control-border bg-control px-3.5 py-2 text-sm font-bold text-foreground transition-colors hover:bg-accent-soft ${className}`}
     >
       {children}
       <ChevronDownIcon open={open} />
@@ -31,12 +31,20 @@ export function SelectTrigger({ open, children, className = "", ...props }: Sele
   );
 }
 
+interface MenuPanelProps extends HTMLAttributes<HTMLDivElement> {
+  // Which edge of the parent the panel lines up with; `end` for triggers at
+  // the right of the screen.
+  align?: "start" | "end";
+}
+
 // Floating panel anchored below its (relative) parent.
-export function MenuPanel({ children, className = "", ...props }: HTMLAttributes<HTMLDivElement>) {
+export function MenuPanel({ children, align = "start", className = "", ...props }: MenuPanelProps) {
   return (
     <div
       {...props}
-      className={`absolute left-0 top-full z-20 mt-2 overflow-hidden rounded-field border border-border bg-surface shadow-panel ${className}`}
+      className={`absolute top-full z-20 mt-2 overflow-hidden rounded-field border border-border bg-surface shadow-panel ${
+        align === "end" ? "right-0" : "left-0"
+      } ${className}`}
     >
       {children}
     </div>
@@ -48,20 +56,24 @@ export function MenuList({ children }: { children: React.ReactNode }) {
 }
 
 // One option row. The orange dot marks the current choice ("you are here");
-// `trailing` holds an optional secondary action such as a remove button.
+// `leading` and `trailing` hold optional controls beside it, such as a
+// checkbox or a remove button, that don't select the option.
 export function MenuItem({
   selected,
   onSelect,
   children,
+  leading,
   trailing,
 }: {
   selected: boolean;
   onSelect: () => void;
   children: React.ReactNode;
+  leading?: React.ReactNode;
   trailing?: React.ReactNode;
 }) {
   return (
     <div className="flex items-center transition-colors hover:bg-accent-soft">
+      {leading}
       <button
         type="button"
         onClick={onSelect}
@@ -70,7 +82,7 @@ export function MenuItem({
           selected ? "font-extrabold text-accent-ink" : "text-muted-foreground hover:text-foreground"
         }`}
       >
-        <span aria-hidden className={`h-1.5 w-1.5 shrink-0 rounded-full ${selected ? "bg-accent" : ""}`} />
+        <span aria-hidden className={`h-1.5 w-1.5 shrink-0 rounded-full ${selected ? "bg-accent-ink" : ""}`} />
         {children}
       </button>
       {trailing}

@@ -1,11 +1,17 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useMemo, useState } from "react";
 import { DAY_COLUMNS, DAY_LABELS } from "@/types";
 import type { Day, PointsTableRow } from "@/types";
-import { PointsEditorModal } from "@/components/dashboard/PointsEditorModal";
 import { Badge } from "@/components/common/Badge";
 import { Panel } from "@/components/common/Panel";
+import { useCanEdit } from "@/components/auth/RoleProvider";
+
+// Loaded on first open, so its code isn't part of the page's initial JS.
+const PointsEditorModal = dynamic(() => import("@/components/dashboard/PointsEditorModal").then((m) => m.PointsEditorModal), {
+  ssr: false,
+});
 
 type SortState = { day: Day; dir: "asc" | "desc" } | null;
 
@@ -28,7 +34,7 @@ function SortIcon({ direction }: { direction: "asc" | "desc" | null }) {
     );
   }
   return (
-    <svg viewBox="0 0 12 12" className="h-4 w-4 opacity-40" fill="currentColor" aria-hidden>
+    <svg viewBox="0 0 12 12" className="h-4 w-4 opacity-60" fill="currentColor" aria-hidden>
       <path d="M6 1.5 8.5 4.5h-5L6 1.5ZM6 10.5 3.5 7.5h5L6 10.5Z" />
     </svg>
   );
@@ -43,6 +49,7 @@ export function PointsTable({
   label?: string;
   onRowUpdated: (row: PointsTableRow) => void;
 }) {
+  const editable = useCanEdit();
   const [editingRow, setEditingRow] = useState<PointsTableRow | null>(null);
   const [sort, setSort] = useState<SortState>(null);
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
@@ -129,13 +136,17 @@ export function PointsTable({
                   onMouseEnter={() => setHoveredCol(null)}
                   className={`px-5 py-4 transition-colors ${hoveredRow === row.discord_id ? HOVER_TINT : ""}`}
                 >
-                  <button
-                    onClick={() => setEditingRow(row)}
-                    className="text-left font-bold text-foreground transition-colors hover:text-accent-ink hover:underline hover:decoration-dashed hover:underline-offset-4"
-                    title="Edit points"
-                  >
-                    {row.discord_username}
-                  </button>
+                  {editable ? (
+                    <button
+                      onClick={() => setEditingRow(row)}
+                      className="text-left font-bold text-foreground transition-colors hover:text-accent-ink hover:underline hover:decoration-dashed hover:underline-offset-4"
+                      title="Edit points"
+                    >
+                      {row.discord_username}
+                    </button>
+                  ) : (
+                    <span className="font-bold text-foreground">{row.discord_username}</span>
+                  )}
                 </td>
                 {DAY_COLUMNS.map((day, i) => {
                   const colIndex = i + 1;

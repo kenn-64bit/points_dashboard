@@ -15,7 +15,7 @@ export function Modal({
 }) {
   return (
     <div
-      className="fixed inset-0 z-40 flex overflow-y-auto bg-overlay p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-40 flex overflow-y-auto bg-overlay p-4"
       onClick={onClose ? (e) => e.target === e.currentTarget && onClose() : undefined}
     >
       <div

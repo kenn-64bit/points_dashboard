@@ -15,6 +15,8 @@ export const MAX_DAY_VALUE = 1_000_000;
 export const MAX_EMAIL_LENGTH = 254;
 // Bounds the scrypt work a single login request can trigger.
 export const MAX_PASSWORD_LENGTH = 1024;
+// Same minimum as scripts/hash-password.mjs.
+export const MIN_PASSWORD_LENGTH = 8;
 
 export function hasAllowedExtension(filename: string): boolean {
   const lower = filename.toLowerCase();
@@ -88,4 +90,22 @@ export function parseUsername(raw: string): { name: string } | { error: string }
     return { error: `"${name.slice(0, 20)}…" is too long. Max ${MAX_USERNAME_LENGTH} characters.` };
   }
   return { name };
+}
+
+// Emails are stored lowercase (see app_users in schema.sql).
+export function parseEmail(raw: unknown): { email: string } | { error: string } {
+  const email = typeof raw === "string" ? raw.trim().toLowerCase() : "";
+  if (!email) return { error: "Email is required" };
+  if (email.length > MAX_EMAIL_LENGTH || !/^[^\s@]+@[^\s@]+$/.test(email)) {
+    return { error: "Enter a valid email address" };
+  }
+  return { email };
+}
+
+export function passwordProblem(raw: unknown): string | null {
+  if (typeof raw !== "string" || raw.length < MIN_PASSWORD_LENGTH) {
+    return `Password must be at least ${MIN_PASSWORD_LENGTH} characters`;
+  }
+  if (raw.length > MAX_PASSWORD_LENGTH) return `Password must be ${MAX_PASSWORD_LENGTH} characters or fewer`;
+  return null;
 }

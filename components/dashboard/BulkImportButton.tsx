@@ -91,7 +91,7 @@ export function BulkImportButton({
 
   return (
     <>
-      <IconButton label="Import CSV/Excel" onClick={() => setOpen(true)}>
+      <IconButton label="Import CSV/Excel" tone="primary" onClick={() => setOpen(true)}>
         <UploadIcon />
       </IconButton>
 

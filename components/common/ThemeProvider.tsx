@@ -7,7 +7,7 @@ type Theme = "light" | "dark";
 interface ThemeContextValue {
   theme: Theme;
   // `origin` is where the reveal circle grows from, in viewport pixels
-  // (the switch's center); defaults to the top-right corner.
+  // (where the switch's knob lands); defaults to the top-right corner.
   toggleTheme: (origin?: { x: number; y: number }) => void;
 }
 

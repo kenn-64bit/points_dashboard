@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { WeekSelector } from "@/components/dashboard/WeekSelector";
 import { PointsTable } from "@/components/dashboard/PointsTable";
@@ -7,7 +8,7 @@ import { BulkImportButton } from "@/components/dashboard/BulkImportButton";
 import { AddParticipantsButton } from "@/components/dashboard/AddParticipantsButton";
 import { ExportEventButton } from "@/components/dashboard/ExportEventButton";
 import { DeleteEventButton } from "@/components/dashboard/DeleteEventButton";
-import { EditEventModal } from "@/components/dashboard/EditEventModal";
+import { useCanEdit } from "@/components/auth/RoleProvider";
 import { IconButton, IconLink } from "@/components/common/IconButton";
 import { PencilIcon, TrophyIcon } from "@/components/common/icons";
 import { Loading } from "@/components/common/Loading";
@@ -15,11 +16,16 @@ import { ErrorState } from "@/components/common/ErrorState";
 import { formatWeekLabel, getCurrentWeekMonday } from "@/lib/week";
 import type { Event, PointsTableRow } from "@/types";
 
-// `weeks` are the server's weeks with points (newest first). The current week
-// is always offered too, even before it has any points.
+// Loaded on first open, so its code isn't part of the page's initial JS.
+const EditEventModal = dynamic(() => import("@/components/dashboard/EditEventModal").then((m) => m.EditEventModal), {
+  ssr: false,
+});
+
+// `weeks` are the event's saved weeks (oldest first). The current week is
+// always offered too, even before it has been added or has any points.
 function withCurrentWeek(weeks: string[]): string[] {
   const current = getCurrentWeekMonday();
-  return weeks.includes(current) ? weeks : [...weeks, current].sort().reverse();
+  return weeks.includes(current) ? weeks : [...weeks, current].sort();
 }
 
 // Long names keep their start and end, with "…" in the middle.
@@ -31,15 +37,30 @@ function middleTruncate(text: string): string {
   return `${text.slice(0, head).trimEnd()}…${text.slice(-tail).trimStart()}`;
 }
 
-export function EventWorkspace({ event: initialEvent, weeks: serverWeeks }: { event: Event; weeks: string[] }) {
+// `initialRows` is `initialWeek`'s table, rendered on the server so it arrives
+// with the page. The server's "current week" is UTC-based, so if the viewer's
+// local week differs the workspace switches to it and fetches that instead.
+export function EventWorkspace({
+  event: initialEvent,
+  weeks: serverWeeks,
+  initialWeek,
+  initialRows,
+}: {
+  event: Event;
+  weeks: string[];
+  initialWeek: string;
+  initialRows: PointsTableRow[] | null;
+}) {
+  const editable = useCanEdit();
   const [event, setEvent] = useState(initialEvent);
   const [editing, setEditing] = useState(false);
   const [showFullTitle, setShowFullTitle] = useState(false);
   const [weeks, setWeeks] = useState(() => withCurrentWeek(serverWeeks));
-  const [week, setWeek] = useState(getCurrentWeekMonday());
-  const [rows, setRows] = useState<PointsTableRow[] | null>(null);
+  const [week, setWeek] = useState(initialWeek);
+  const [rows, setRows] = useState<PointsTableRow[] | null>(initialRows);
   const [error, setError] = useState<string | null>(null);
   const requestIdRef = useRef(0);
+  const preloadedWeekRef = useRef<string | null>(initialRows ? initialWeek : null);
   const eventId = event.event_id;
 
   // Week 1 is the event's earliest week.
@@ -66,11 +87,20 @@ export function EventWorkspace({ event: initialEvent, weeks: serverWeeks }: { ev
   }, [eventId, week]);
 
   useEffect(() => {
+    const localWeek = getCurrentWeekMonday();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (localWeek !== initialWeek) setWeek(localWeek);
+  }, [initialWeek]);
+
+  useEffect(() => {
+    // The server already rendered this week's rows — skip the first fetch.
+    const preloaded = preloadedWeekRef.current === week;
+    preloadedWeekRef.current = null;
+    if (preloaded) return;
     // Standard fetch-on-mount/dependency-change pattern; loadPoints resets
     // rows/error before fetching so the loading state renders correctly.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadPoints();
-  }, [loadPoints]);
+  }, [loadPoints, week]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -102,12 +132,14 @@ export function EventWorkspace({ event: initialEvent, weeks: serverWeeks }: { ev
             </div>
           );
         })()}
-        <span className="shrink-0 rounded-full bg-accent-soft px-3 py-1 text-sm font-bold tabular-nums text-accent-ink">
+        <span className="shrink-0 rounded-full bg-accent px-3 py-1 text-sm font-bold tabular-nums text-accent-foreground shadow-sm">
           {weeks.length} {weeks.length === 1 ? "week" : "weeks"}
         </span>
-        <IconButton label="Edit event" onClick={() => setEditing(true)} className="h-9 w-9">
-          <PencilIcon className="h-4 w-4" />
-        </IconButton>
+        {editable && (
+          <IconButton label="Edit event" tone="primary" onClick={() => setEditing(true)} className="h-9 w-9">
+            <PencilIcon className="h-4 w-4" />
+          </IconButton>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -120,14 +152,22 @@ export function EventWorkspace({ event: initialEvent, weeks: serverWeeks }: { ev
           onChange={setWeek}
         />
         <div className="flex shrink-0 items-center gap-2">
-          <IconLink href={`/dashboard/events/${eventId}/leaderboard`} label="Leaderboard">
+          <IconLink href={`/dashboard/events/${eventId}/leaderboard`} label="Leaderboard" tone="primary">
             <TrophyIcon />
           </IconLink>
-          <AddParticipantsButton eventId={eventId} week={week} weekNumber={weekNumber(week)} onAdded={loadPoints} />
-          <BulkImportButton eventId={eventId} week={week} weekNumber={weekNumber(week)} onImported={loadPoints} />
-          <ExportEventButton eventId={eventId} weeks={serverWeeks} />
-          <span aria-hidden className="mx-1 h-6 border-l border-dashed border-line" />
-          <DeleteEventButton eventId={eventId} eventName={event.event_name} />
+          {editable && (
+            <>
+              <AddParticipantsButton eventId={eventId} week={week} weekNumber={weekNumber(week)} onAdded={loadPoints} />
+              <BulkImportButton eventId={eventId} week={week} weekNumber={weekNumber(week)} onImported={loadPoints} />
+            </>
+          )}
+          <ExportEventButton eventId={eventId} weeks={weeks} />
+          {editable && (
+            <>
+              <span aria-hidden className="mx-1 h-6 border-l border-dashed border-line" />
+              <DeleteEventButton eventId={eventId} eventName={event.event_name} />
+            </>
+          )}
         </div>
       </div>
       {error && <ErrorState message={error} onRetry={loadPoints} />}

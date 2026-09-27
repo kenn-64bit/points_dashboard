@@ -1,5 +1,6 @@
 import "server-only";
 import { DAY_COLUMNS } from "@/types";
+import type { AppUserRole } from "@/types";
 
 // In-memory stand-in for the Supabase client, used only when
 // NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY aren't set (see
@@ -41,36 +42,43 @@ interface MockPoints {
 interface MockAppUser {
   email: string;
   password_hash: string;
-  role: "admin" | "member";
+  role: AppUserRole;
+  created_at: string;
+}
+
+interface MockEventWeek {
+  event_id: string;
+  week_date: string;
   created_at: string;
 }
 
 interface MockStore {
   events: MockEvent[];
+  event_weeks: MockEventWeek[];
   users: MockUser[];
   points: MockPoints[];
   app_users: MockAppUser[];
 }
 
-// Dev-only sign-in for mock mode: admin@example.com / admin. The hash was
-// generated with scripts/hash-password.mjs; this account never exists once
-// real Supabase credentials are configured.
+// Dev-only sign-ins for mock mode, one per role, all with the password
+// "admin": admin@example.com, editor@example.com, viewer@example.com. The hash
+// was generated with scripts/hash-password.mjs; these accounts never exist
+// once real Supabase credentials are configured.
 export const MOCK_ADMIN_EMAIL = "admin@example.com";
 export const MOCK_ADMIN_PASSWORD = "admin";
+const MOCK_PASSWORD_HASH =
+  "scrypt$wHvq0XtWEWY0q9ULieqsyw==$+2UK8wCD6fVFvYJtDYZo39Xc+Rrr/aCirUgZ/n9S5hEqrxDX7Y6qEOjHscH3K7siXpql0gge7Qb8/UbWEGNstg==";
 function seedAppUsers(): MockAppUser[] {
+  const created_at = new Date().toISOString();
   return [
-    {
-      email: MOCK_ADMIN_EMAIL,
-      password_hash:
-        "scrypt$wHvq0XtWEWY0q9ULieqsyw==$+2UK8wCD6fVFvYJtDYZo39Xc+Rrr/aCirUgZ/n9S5hEqrxDX7Y6qEOjHscH3K7siXpql0gge7Qb8/UbWEGNstg==",
-      role: "admin",
-      created_at: new Date().toISOString(),
-    },
+    { email: MOCK_ADMIN_EMAIL, password_hash: MOCK_PASSWORD_HASH, role: "admin", created_at },
+    { email: "editor@example.com", password_hash: MOCK_PASSWORD_HASH, role: "editor", created_at },
+    { email: "viewer@example.com", password_hash: MOCK_PASSWORD_HASH, role: "viewer", created_at },
   ];
 }
 
 function buildSeedStore(): MockStore {
-  return { events: [], users: [], points: [], app_users: seedAppUsers() };
+  return { events: [], event_weeks: [], users: [], points: [], app_users: seedAppUsers() };
 }
 
 // Persist across Next.js dev hot-reloads (module cache is otherwise reset per
@@ -79,6 +87,7 @@ const globalForMock = globalThis as unknown as { __dpmMockStore?: MockStore };
 const store = globalForMock.__dpmMockStore ?? buildSeedStore();
 // A store kept from before app_users existed won't have the key.
 store.app_users ??= seedAppUsers();
+store.event_weeks ??= [];
 globalForMock.__dpmMockStore = store;
 
 type Row = Record<string, unknown>;
@@ -197,6 +206,12 @@ class MockQueryBuilder<T extends Row> implements PromiseLike<{ data: unknown; er
         created_at,
         month: created_at.slice(0, 7),
       };
+    }
+    if (this.table === "event_weeks") {
+      return { event_id: payload.event_id, week_date: payload.week_date, created_at: now };
+    }
+    if (this.table === "app_users") {
+      return { email: payload.email, password_hash: payload.password_hash, role: payload.role ?? "viewer", created_at: now };
     }
     if (this.table === "users") {
       return {

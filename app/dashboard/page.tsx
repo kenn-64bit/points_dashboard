@@ -10,10 +10,12 @@ async function loadEvents(): Promise<{ events: Event[] } | { error: string }> {
   try {
     const supabase = getSupabaseAdmin();
     const { data, error } = await supabase.from("events").select("*").order("created_at", { ascending: false });
-    if (error) return { error: error.message };
+    if (error) throw error;
     return { events: (data ?? []) as Event[] };
   } catch (err) {
-    return { error: (err as Error).message };
+    // Logged here; the page shows a generic message rather than raw DB text.
+    console.error(err);
+    return { error: "Couldn't load events. Please try again." };
   }
 }
 

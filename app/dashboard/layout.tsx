@@ -1,19 +1,33 @@
 import { requirePageUser } from "@/lib/auth/dal";
+import { canManageTeam } from "@/lib/auth/roles";
 import { Header } from "@/components/common/Header";
+import { NavLink } from "@/components/common/NavLink";
+import { UsersIcon } from "@/components/common/icons";
 import { ThemeToggle } from "@/components/common/ThemeToggle";
-import { SignOutButton } from "@/components/auth/SignOutButton";
+import { AccountMenu } from "@/components/auth/AccountMenu";
+import { RoleProvider } from "@/components/auth/RoleProvider";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const user = await requirePageUser();
 
   return (
     <div className="flex min-h-dvh flex-col">
-      <Header>
-        <span className="hidden max-w-48 truncate px-1 text-xs text-muted-foreground sm:inline">{user.email}</span>
+      <Header
+        nav={
+          canManageTeam(user.role) && (
+            <NavLink href="/dashboard/team">
+              <UsersIcon className="h-4 w-4" />
+              Team
+            </NavLink>
+          )
+        }
+      >
         <ThemeToggle />
-        <SignOutButton />
+        <AccountMenu email={user.email} role={user.role} />
       </Header>
-      <div className="flex flex-1 flex-col">{children}</div>
+      <RoleProvider role={user.role}>
+        <div className="flex flex-1 flex-col">{children}</div>
+      </RoleProvider>
     </div>
   );
 }

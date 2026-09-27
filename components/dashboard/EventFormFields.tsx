@@ -39,7 +39,7 @@ export function isEventFormValid(values: EventFormValues): boolean {
 
 function LengthCounter({ length, max }: { length: number; max: number }) {
   return (
-    <span className={`text-xs tabular-nums ${length > max ? "font-bold text-danger" : "text-muted-foreground"}`}>
+    <span className={`text-xs tabular-nums ${length > max ? "font-bold text-danger-ink" : "text-muted-foreground"}`}>
       {length}/{max}
     </span>
   );

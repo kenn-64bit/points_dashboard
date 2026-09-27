@@ -8,6 +8,7 @@ import { Button, buttonClasses } from "@/components/common/Button";
 import { PencilIcon } from "@/components/common/icons";
 import { EventPassCard, useEventSummary } from "@/components/dashboard/EventPassCard";
 import { EditEventModal } from "@/components/dashboard/EditEventModal";
+import { useCanEdit } from "@/components/auth/RoleProvider";
 
 export function EventPassModal({
   event,
@@ -21,6 +22,7 @@ export function EventPassModal({
   const titleId = `event-pass-${event.event_id}`;
   const { summary, failed } = useEventSummary(event.event_id);
   const [editing, setEditing] = useState(false);
+  const editable = useCanEdit();
 
   useEffect(() => {
     // While editing, the edit modal owns Escape (it backs out to the pass).
@@ -54,15 +56,17 @@ export function EventPassModal({
         failed={failed}
         titleId={titleId}
         action={
-          <button
-            type="button"
-            onClick={() => setEditing(true)}
-            aria-label="Edit event"
-            title="Edit event"
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-surface shadow-sm transition-transform duration-150 ease-out hover:-rotate-12 active:translate-y-px"
-          >
-            <PencilIcon className="h-4 w-4" />
-          </button>
+          editable && (
+            <button
+              type="button"
+              onClick={() => setEditing(true)}
+              aria-label="Edit event"
+              title="Edit event"
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-surface shadow-sm transition-transform duration-150 ease-out hover:-rotate-12 active:translate-y-px"
+            >
+              <PencilIcon className="h-4 w-4" />
+            </button>
+          )
         }
       />
 

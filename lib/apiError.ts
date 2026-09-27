@@ -26,3 +26,7 @@ export function errorResponse(err: unknown, fallbackMessage = "Something went wr
 export function unauthorizedResponse() {
   return NextResponse.json({ error: "Your session has expired — please sign in again." }, { status: 401 });
 }
+
+export function forbiddenResponse(message = "You have view-only access.") {
+  return NextResponse.json({ error: message }, { status: 403 });
+}

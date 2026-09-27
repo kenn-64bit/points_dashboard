@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Button } from "@/components/common/Button";
 import { Panel } from "@/components/common/Panel";
 import { LeafMark } from "@/components/common/LeafMark";
-import { Label, inputClasses } from "@/components/common/Field";
+import { FieldError, Label, inputClasses, inputErrorClasses } from "@/components/common/Field";
 import { stripDisallowed } from "@/lib/text";
 import { MAX_EMAIL_LENGTH, MAX_PASSWORD_LENGTH } from "@/lib/validation";
 
@@ -16,6 +16,11 @@ export function LoginForm({ next }: { next: string }) {
   const [remember, setRemember] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // A bad login can't say which field is wrong (that would reveal who's on the
+  // roster), so both fields go red and the message sits under the password.
+  const fieldClasses = error ? inputErrorClasses : inputClasses;
+  const errorProps = error ? { "aria-invalid": true, "aria-describedby": "login-error" } : {};
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -55,9 +60,13 @@ export function LoginForm({ next }: { next: string }) {
             autoFocus
             required
             value={email}
-            onChange={(e) => setEmail(stripDisallowed(e.target.value))}
+            onChange={(e) => {
+              setEmail(stripDisallowed(e.target.value));
+              setError(null);
+            }}
             maxLength={MAX_EMAIL_LENGTH}
-            className={inputClasses}
+            className={fieldClasses}
+            {...errorProps}
           />
         </div>
         <div>
@@ -68,10 +77,15 @@ export function LoginForm({ next }: { next: string }) {
             autoComplete="current-password"
             required
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              setError(null);
+            }}
             maxLength={MAX_PASSWORD_LENGTH}
-            className={inputClasses}
+            className={fieldClasses}
+            {...errorProps}
           />
+          {error && <FieldError id="login-error">{error}</FieldError>}
         </div>
 
         <label className="flex w-fit items-center gap-2 text-sm text-foreground">
@@ -79,16 +93,10 @@ export function LoginForm({ next }: { next: string }) {
             type="checkbox"
             checked={remember}
             onChange={(e) => setRemember(e.target.checked)}
-            className="h-4 w-4 accent-primary"
+            className="h-4 w-4 accent-primary-ink"
           />
           Remember me for 30 days
         </label>
-
-        {error && (
-          <p role="alert" className="rounded-field bg-danger-soft px-3.5 py-2.5 text-sm text-danger">
-            {error}
-          </p>
-        )}
 
         <Button type="submit" variant="primary" className="w-full" disabled={submitting || !email || !password}>
           {submitting ? "Signing in…" : "Sign in"}

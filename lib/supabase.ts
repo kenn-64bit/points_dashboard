@@ -26,7 +26,7 @@ export function getSupabaseAdmin(): SupabaseClient<any, any, any> {
     // this branch's relevance simply by setting real env vars; nothing else
     // in the app needs to change either way. See lib/mockSupabase.ts.
     console.warn(
-      `[dev] Supabase env vars not set — using in-memory mock data instead of a real database. Sign in with ${MOCK_ADMIN_EMAIL} / ${MOCK_ADMIN_PASSWORD}.`
+      `[dev] Supabase env vars not set — using in-memory mock data instead of a real database. Sign in with ${MOCK_ADMIN_EMAIL} / ${MOCK_ADMIN_PASSWORD} (or editor@ / viewer@example.com, same password).`
     );
     cachedClient = createMockSupabaseClient() as unknown as SupabaseClient<any, any, any>;
     return cachedClient;

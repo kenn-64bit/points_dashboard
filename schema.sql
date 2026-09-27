@@ -55,6 +55,18 @@ create index idx_points_event_id on points (event_id);
 create index idx_points_discord_id on points (discord_id);
 create index idx_points_event_week on points (event_id, week_date);
 
+-- Weeks an admin has added to an event. A week also counts once it has points,
+-- so this mainly keeps planned weeks that have no scores yet (see
+-- lib/eventData.ts, loadEventWeeks).
+create table event_weeks (
+  event_id   uuid not null references events (event_id) on delete cascade,
+  week_date  date not null,
+  created_at timestamptz not null default now(),
+  primary key (event_id, week_date),
+  constraint event_weeks_week_is_monday check (extract(isodow from week_date) = 1)
+);
+alter table event_weeks enable row level security;
+
 create or replace function set_updated_at()
 returns trigger as $$
 begin
@@ -67,13 +79,17 @@ create trigger trg_points_updated_at
 before update on points
 for each row execute function set_updated_at();
 
--- Login roster — only emails listed here can sign in. Managed by hand: add
--- someone with the SQL printed by `npm run hash-password`, remove them with
--- `delete from app_users where email = '...';` (takes effect immediately).
+-- Login roster — only emails listed here can sign in. Admins manage it on the
+-- Team page (/dashboard/team); create the first admin with the SQL printed by
+-- `npm run hash-password`. Removing a row takes effect immediately.
+--   admin  — everything, plus managing this roster
+--   editor — create, edit and delete events, weeks and points
+--   viewer — read-only (can still download CSV exports)
+-- Keep in sync with APP_USER_ROLES in lib/auth/roles.ts.
 create table app_users (
   email         text primary key check (email = lower(email)),
   password_hash text not null,
-  role          text not null default 'member' check (role in ('admin', 'member')),
+  role          text not null default 'viewer' check (role in ('admin', 'editor', 'viewer')),
   created_at    timestamptz not null default now()
 );
 -- RLS on with no policies: nothing but the service role can read password hashes.
@@ -99,3 +115,23 @@ alter table app_users enable row level security;
 --     add constraint events_event_name_length check (char_length(event_name) between 1 and 60) not valid;
 --   alter table users
 --     add constraint users_discord_username_length check (char_length(discord_username) between 1 and 32) not valid;
+
+-- Migration for projects created before added weeks were saved (2026-09-27).
+-- Until it runs, weeks without scores disappear on reload. Safe to run once:
+--
+--   create table event_weeks (
+--     event_id   uuid not null references events (event_id) on delete cascade,
+--     week_date  date not null,
+--     created_at timestamptz not null default now(),
+--     primary key (event_id, week_date),
+--     constraint event_weeks_week_is_monday check (extract(isodow from week_date) = 1)
+--   );
+--   alter table event_weeks enable row level security;
+
+-- Migration for projects created before editor/viewer roles (2026-09-27).
+-- Existing 'member' rows become editors, so nobody loses access. Safe to run once:
+--
+--   alter table app_users drop constraint app_users_role_check;
+--   update app_users set role = 'editor' where role = 'member';
+--   alter table app_users alter column role set default 'viewer';
+--   alter table app_users add constraint app_users_role_check check (role in ('admin', 'editor', 'viewer'));

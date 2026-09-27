@@ -5,7 +5,7 @@ const TONE_CLASSES: Record<Tone, string> = {
   accent: "bg-accent text-accent-foreground",
   primary: "bg-primary-soft text-foreground",
   total: "bg-total text-total-foreground",
-  danger: "bg-danger-soft text-danger",
+  danger: "bg-danger-soft text-danger-ink",
 };
 
 export function Badge({

@@ -10,7 +10,7 @@ export function ErrorState({
   retryLabel?: string;
 }) {
   return (
-    <div role="alert" className="mx-auto my-8 max-w-md rounded-panel border border-danger-soft bg-danger-soft p-5 text-sm text-danger">
+    <div role="alert" className="mx-auto my-8 max-w-md rounded-panel border border-danger-soft bg-danger-soft p-5 text-sm text-danger-ink">
       <p className="font-extrabold">Something went wrong</p>
       <p className="mt-1">{message}</p>
       {onRetry && (

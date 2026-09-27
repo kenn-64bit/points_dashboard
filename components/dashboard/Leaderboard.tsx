@@ -1,15 +1,9 @@
 import type { LeaderboardRow } from "@/types";
 import { Badge } from "@/components/common/Badge";
 import { Panel } from "@/components/common/Panel";
+import { ordinal } from "@/lib/points";
 
 const RANK_BADGES: Record<number, string> = { 1: "🥇", 2: "🥈", 3: "🥉" };
-
-const ORDINAL_RULES = new Intl.PluralRules("en-US", { type: "ordinal" });
-const ORDINAL_SUFFIXES: Partial<Record<Intl.LDMLPluralRule, string>> = { one: "st", two: "nd", few: "rd" };
-
-function ordinal(n: number) {
-  return `${n}${ORDINAL_SUFFIXES[ORDINAL_RULES.select(n)] ?? "th"}`;
-}
 
 export function Leaderboard({ rows }: { rows: LeaderboardRow[] }) {
   if (rows.length === 0) {
@@ -50,12 +44,14 @@ export function Leaderboard({ rows }: { rows: LeaderboardRow[] }) {
               </span>
             </div>
             <div className="bar-track relative h-11 flex-1 overflow-hidden rounded-full">
-              <div
-                className={`bar-stripes h-full min-w-11 rounded-full transition-[width] duration-200 ease-out ${
-                  isTop ? "bg-accent" : "bg-bar-idle"
-                }`}
-                style={{ width: `${widthPct}%` }}
-              />
+              {row.total_points > 0 && (
+                <div
+                  className={`bar-stripes h-full min-w-11 rounded-full transition-[width] duration-200 ease-out ${
+                    isTop ? "bg-accent" : "bg-bar-idle"
+                  }`}
+                  style={{ width: `${widthPct}%` }}
+                />
+              )}
               <div className="absolute inset-y-0 left-2 right-2 flex items-center">
                 <span className="truncate rounded-full bg-surface/70 px-3 py-1 text-sm font-bold text-foreground">
                   {row.discord_username}

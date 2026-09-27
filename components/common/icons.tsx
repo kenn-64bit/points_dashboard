@@ -76,3 +76,31 @@ export function TrashIcon(props: IconProps) {
     </Icon>
   );
 }
+
+export function UsersIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <circle cx="9" cy="8" r="3.5" />
+      <path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5" />
+      <path d="M15.5 4.8a3.5 3.5 0 0 1 0 6.4M17.5 14.8c2 .7 3.5 2.4 4 5.2" />
+    </Icon>
+  );
+}
+
+export function KeyIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <circle cx="8" cy="15" r="4" />
+      <path d="M11 12l8-8M16 7l2.5 2.5M18.5 4.5 21 7" />
+    </Icon>
+  );
+}
+
+export function SignOutIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M14 4H7.5A2.5 2.5 0 0 0 5 6.5v11A2.5 2.5 0 0 0 7.5 20H14" />
+      <path d="M11 12h9.5M17 8.5l3.5 3.5-3.5 3.5" />
+    </Icon>
+  );
+}

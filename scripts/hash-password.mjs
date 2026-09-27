@@ -2,6 +2,8 @@
 // in app_users. Run with `npm run hash-password`, then paste the output into
 // the Supabase SQL Editor. Requires Node 22.18+ (imports the .ts module below
 // via Node's built-in type stripping).
+// Mainly for creating the first admin — after that, admins can manage the
+// roster from the Team page (/dashboard/team).
 import readline from "node:readline";
 import { hashPassword } from "../lib/auth/password.ts";
 
@@ -41,9 +43,11 @@ if (confirm !== password) {
   process.exit(1);
 }
 
-const roleInput = (await ask("Role [admin/member] (default: admin): ")).trim().toLowerCase() || "admin";
-if (roleInput !== "admin" && roleInput !== "member") {
-  console.error('Role must be "admin" or "member".');
+// Keep in sync with APP_USER_ROLES in lib/auth/roles.ts.
+const ROLES = ["admin", "editor", "viewer"];
+const roleInput = (await ask("Role [admin/editor/viewer] (default: admin): ")).trim().toLowerCase() || "admin";
+if (!ROLES.includes(roleInput)) {
+  console.error('Role must be "admin", "editor" or "viewer".');
   process.exit(1);
 }
 

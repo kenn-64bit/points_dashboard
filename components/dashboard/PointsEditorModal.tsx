@@ -113,7 +113,7 @@ export function PointsEditorModal({
                     <button
                       type="button"
                       onClick={() => adjust(day, -1)}
-                      className="flex flex-1 items-center justify-center bg-danger-soft text-danger transition-colors hover:bg-danger hover:text-danger-foreground"
+                      className="flex flex-1 items-center justify-center bg-danger-soft text-danger-ink transition-colors hover:bg-danger hover:text-danger-foreground"
                       aria-label={`Decrease ${DAY_LABELS[day]}`}
                     >
                       <span className="text-base font-bold leading-none">−</span>
