@@ -2,9 +2,8 @@
 
 import dynamic from "next/dynamic";
 import { useMemo, useState } from "react";
-import { DAY_LABELS } from "@/types";
 import type { Day, EventWeek, PointsTableRow } from "@/types";
-import { weekDays } from "@/lib/week";
+import { formatShortDayLabel, weekDays } from "@/lib/week";
 import { Badge } from "@/components/common/Badge";
 import { Panel } from "@/components/common/Panel";
 import { useCanEdit } from "@/components/auth/RoleProvider";
@@ -123,7 +122,7 @@ export function PointsTable({
                         active ? "text-accent-ink" : "text-muted-foreground"
                       }`}
                     >
-                      {DAY_LABELS[day]} {Number(date.slice(8))}
+                      {formatShortDayLabel(date)}
                       <SortIcon direction={active ? activeSort!.dir : null} />
                     </button>
                   </th>

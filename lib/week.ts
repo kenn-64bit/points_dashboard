@@ -1,4 +1,4 @@
-import { DAY_COLUMNS } from "@/types";
+import { DAY_COLUMNS, DAY_LABELS } from "@/types";
 import type { Day, EventWeek } from "@/types";
 
 // A week is the dates an admin picked through "Add Week": 1–7 days, starting
@@ -174,4 +174,9 @@ export function formatDayLabel(dateStr: string): string {
     year: "numeric",
     timeZone: "UTC",
   });
+}
+
+// e.g. "Thu 20", as the points table and editor head a day.
+export function formatShortDayLabel(dateStr: string): string {
+  return `${DAY_LABELS[dayColumnOf(dateStr)]} ${Number(dateStr.slice(8))}`;
 }

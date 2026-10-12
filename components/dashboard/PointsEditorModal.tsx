@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { DAY_COLUMNS, DAY_LABELS } from "@/types";
 import type { Day, DayValues, EventWeek, PointsTableRow } from "@/types";
 import { useToast } from "@/components/common/Toast";
-import { formatWeekRange, weekDays } from "@/lib/week";
+import { formatShortDayLabel, formatWeekRange, weekDays, weekHasDay } from "@/lib/week";
 import { Modal } from "@/components/common/Modal";
 import { Button } from "@/components/common/Button";
 import { TotalTile } from "@/components/common/TotalTile";
@@ -13,7 +13,12 @@ import { KeyValueRow } from "@/components/common/KeyValueRow";
 
 type Phase = "edit" | "confirm";
 
-// Only `week`'s own days can be edited; the others are saved as 0.
+// Wider modals for 5–7 day weeks, so every day box fits in one row at full
+// size (6rem each); shorter weeks fit the default.
+const MODAL_WIDTH_BY_DAYS: Partial<Record<number, string>> = { 5: "max-w-2xl", 6: "max-w-3xl", 7: "max-w-4xl" };
+
+// One box per day of `week`, in a single row (two per row on phones). Only
+// `week`'s own days can be edited; the others are saved as 0.
 export function PointsEditorModal({
   row,
   week,
@@ -28,13 +33,13 @@ export function PointsEditorModal({
   const router = useRouter();
   const { showToast } = useToast();
   const [phase, setPhase] = useState<Phase>("edit");
-  const days = weekDays(week).map(({ day }) => day);
+  const days = weekDays(week);
   const [values, setValues] = useState<DayValues>(
-    () => Object.fromEntries(DAY_COLUMNS.map((day) => [day, days.includes(day) ? row[day] : 0])) as DayValues
+    () => Object.fromEntries(DAY_COLUMNS.map((day) => [day, weekHasDay(week, day) ? row[day] : 0])) as DayValues
   );
   const [saving, setSaving] = useState(false);
 
-  const total = days.reduce((sum, day) => sum + (values[day] || 0), 0);
+  const total = days.reduce((sum, { day }) => sum + (values[day] || 0), 0);
 
   function adjust(day: Day, delta: number) {
     setValues((prev) => ({ ...prev, [day]: Math.max(0, (prev[day] || 0) + delta) }));
@@ -72,7 +77,7 @@ export function PointsEditorModal({
   }
 
   return (
-    <Modal maxWidth="max-w-xl">
+    <Modal maxWidth={MODAL_WIDTH_BY_DAYS[days.length] ?? "max-w-xl"}>
       <div className="mb-5 flex items-start justify-between gap-4">
         <div className="min-w-0">
           <h3 className="truncate text-lg font-extrabold text-foreground">{row.discord_username}</h3>
@@ -83,11 +88,11 @@ export function PointsEditorModal({
 
       {phase === "edit" && (
         <>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {days.map((day) => (
+          <div className="grid grid-cols-2 gap-3 sm:grid-flow-col sm:grid-cols-none sm:auto-cols-fr">
+            {days.map(({ day, date }) => (
               <div key={day} className="flex flex-col items-center gap-1.5 text-xs font-bold text-muted-foreground">
-                {DAY_LABELS[day]}
-                <div className="flex h-16 w-24 overflow-hidden rounded-field border border-border">
+                {formatShortDayLabel(date)}
+                <div className="flex h-16 w-full max-w-24 overflow-hidden rounded-field border border-border">
                   <input
                     type="number"
                     min={0}
@@ -103,9 +108,9 @@ export function PointsEditorModal({
                       setValues((prev) => ({ ...prev, [day]: normalized }));
                     }}
                     aria-label={`${DAY_LABELS[day]} points`}
-                    className="w-16 bg-surface-muted text-center text-2xl font-extrabold tabular-nums text-foreground outline-none focus:bg-primary-soft"
+                    className="min-w-0 flex-1 bg-surface-muted text-center text-2xl font-extrabold tabular-nums text-foreground outline-none focus:bg-primary-soft"
                   />
-                  <div className="flex w-8 flex-col">
+                  <div className="flex w-8 shrink-0 flex-col">
                     <button
                       type="button"
                       onClick={() => adjust(day, 1)}
@@ -145,8 +150,8 @@ export function PointsEditorModal({
             {formatWeekRange(week)}?
           </p>
           <div className="mt-3 rounded-field bg-surface-muted px-4 py-2">
-            {days.map((day) => (
-              <KeyValueRow key={day} label={DAY_LABELS[day]} value={values[day]} />
+            {days.map(({ day, date }) => (
+              <KeyValueRow key={day} label={formatShortDayLabel(date)} value={values[day]} />
             ))}
             <div className="mt-1 border-t border-line pt-1">
               <KeyValueRow label="Total" value={total} emphasis />
