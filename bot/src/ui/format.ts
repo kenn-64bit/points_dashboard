@@ -30,9 +30,10 @@ export function rankBadge(rank: number): string {
 }
 
 // Player and event names are typed in by staff or imported from spreadsheets.
-// Escaping Markdown makes a name like "*kenn*" show as typed.
+// Escaping Markdown makes a name like "*kenn*" show as typed, and keeps one
+// like "[Free Nitro](https://…)" from turning into a disguised link.
 export function safe(text: string): string {
-  return escapeMarkdown(text);
+  return escapeMarkdown(text, { maskedLink: true });
 }
 
 export function truncate(text: string, max: number): string {

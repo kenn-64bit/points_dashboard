@@ -17,6 +17,8 @@ A web dashboard for running points-based events in a Discord community. Staff cr
 - Deleting a week removes it and all of its points for good, and frees its dates. It stays gone when you leave the page and come back, including with the browser's back button.
 - Weeks are labelled by their place in the event, e.g. `Week 2 · Sep 21 - 25, 2026`. Deleting a week renumbers the others but never changes their dates.
 - Editors can add or remove weeks, add participants, and set, change or clear any participant's points in a points table.
+- To add many participants at once, paste a column of names copied from Excel or Google Sheets into **Add participants**. Each name gets its own row, duplicates and a copied `Discord Username` header are skipped, and the button shows how many will be added (up to 100 at a time).
+- Names that look like spreadsheet formulas (starting with `=`, `+` or `-`) or that contain links are rejected. The same check runs in the form, in the API and in bulk import.
 
 ### Leaderboard
 - Each event has a leaderboard that ranks participants by their total points across all of its weeks.

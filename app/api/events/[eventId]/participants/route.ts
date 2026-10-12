@@ -4,15 +4,13 @@ import { resolveDiscordId, resolveDiscordIdsBatch } from "@/lib/users";
 import { errorResponse } from "@/lib/apiError";
 import { requireApiUser } from "@/lib/auth/dal";
 import { canEdit } from "@/lib/auth/roles";
-import { isValidUUID, isValidDateStr, parseUsername } from "@/lib/validation";
+import { isValidUUID, isValidDateStr, parseUsername, MAX_PARTICIPANTS_PER_REQUEST } from "@/lib/validation";
 import { resolveWeek } from "@/lib/week";
 import { loadEventWeeks } from "@/lib/eventData";
 import { logAudit } from "@/lib/audit";
 import { DAY_COLUMNS } from "@/types";
 
 type Params = { params: Promise<{ eventId: string }> };
-
-const MAX_PARTICIPANTS_PER_REQUEST = 100;
 
 // Adds participants to one week of an event by name, starting them at 0 points.
 // A participant is anyone with a points row in the event, so this resolves (or

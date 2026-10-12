@@ -8,6 +8,8 @@ export const ALLOWED_IMPORT_EXTENSIONS = process.env.NEXT_PUBLIC_ALLOWED_FILE_TY
   : [".csv", ".xlsx", ".xls"];
 
 export const MAX_IMPORT_ROWS = 2000;
+// Names one Add participants request can carry, typed or pasted.
+export const MAX_PARTICIPANTS_PER_REQUEST = 100;
 export const MAX_EVENT_NAME_LENGTH = 60;
 export const MAX_EVENT_DESCRIPTION_LENGTH = 500;
 export const MAX_USERNAME_LENGTH = 32; // Discord's own limit
@@ -84,13 +86,32 @@ export function parseEventInput(body: unknown): { data: EventInput } | { error: 
   return { data: { event_name, event_type: event_type as EventType, description } };
 }
 
-// One participant name, from the Add participants form or an import file.
+// Names often come from sign-up sheets anyone can type into, so on top of the
+// shared text policy (lib/text.ts) a name can't be something that acts as a
+// command where it's shown later. Each pattern is anchored or fixed text with
+// no nested quantifiers, so checking stays linear however long the input is.
+const USERNAME_RULES: { pattern: RegExp; problem: string }[] = [
+  // =HYPERLINK(…), +cmd|' /C calc'!A0 and the like run as formulas when a
+  // spreadsheet opens them. Exports also neutralise these (lib/csv.ts),
+  // including a leading @, which stays allowed since "@name" is how many
+  // people write a Discord handle.
+  { pattern: /^[=+\-]/, problem: "looks like a spreadsheet formula" },
+  // Links and script URLs. The bot shows names in embeds, where Discord turns
+  // URLs and [text](url) into clickable links.
+  { pattern: /:\/\/|\bwww\.|\bdiscord(?:app)?\.(?:gg|com)\/|\b(?:java|vb)script:/i, problem: "can't contain links" },
+];
+
+// One participant name, from the Add participants form (typed or pasted) or
+// an import file. The rules run on the cleaned name, so leading spaces or
+// invisible characters can't hide a leading "=".
 export function parseUsername(raw: string): { name: string } | { error: string } {
   const shown = raw.trim().slice(0, 20);
   const problem = textProblem(raw, `"${shown}"`);
   if (problem) return { error: problem };
   const name = cleanText(raw);
   if (!name) return { error: "Username is empty" };
+  const rule = USERNAME_RULES.find(({ pattern }) => pattern.test(name));
+  if (rule) return { error: `"${shown}" ${rule.problem}` };
   if (name.length > MAX_USERNAME_LENGTH) {
     return { error: `"${name.slice(0, 20)}…" is too long. Max ${MAX_USERNAME_LENGTH} characters.` };
   }
