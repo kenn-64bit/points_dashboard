@@ -6,6 +6,7 @@ import type { Day, EventWeek, PointsTableRow } from "@/types";
 import { formatShortDayLabel, weekDays } from "@/lib/week";
 import { Badge } from "@/components/common/Badge";
 import { Panel } from "@/components/common/Panel";
+import { Skeleton, SkeletonLabel } from "@/components/common/Skeleton";
 import { useCanEdit } from "@/components/auth/RoleProvider";
 
 // Loaded on first open, so its code isn't part of the page's initial JS.
@@ -187,5 +188,46 @@ export function PointsTable({
         />
       )}
     </>
+  );
+}
+
+// Same frame as the table (user, 7 days, total), shown while a week loads.
+export function PointsTableSkeleton({ rows = 6 }: { rows?: number }) {
+  const cols = Array.from({ length: 7 }, (_, i) => i);
+  return (
+    <Panel label={<SkeletonLabel className="w-32" />} bodyClassName="overflow-x-auto">
+      <div className="w-full min-w-[640px] text-sm">
+        <div className="flex divide-x divide-border border-b border-border bg-surface-muted">
+          <div className="flex-[2] px-5 py-4">
+            <Skeleton className="h-4 w-12 bg-border" />
+          </div>
+          {cols.map((i) => (
+            <div key={i} className="flex flex-1 justify-center px-4 py-4">
+              <Skeleton className="h-4 w-10 bg-border" />
+            </div>
+          ))}
+          <div className="flex flex-1 justify-center px-5 py-4">
+            <Skeleton className="h-4 w-10 bg-border" />
+          </div>
+        </div>
+        <div className="divide-y divide-dashed divide-line">
+          {Array.from({ length: rows }, (_, r) => (
+            <div key={r} className="flex items-center">
+              <div className="flex-[2] px-5 py-3.5">
+                <Skeleton className={`h-4 ${r % 3 === 0 ? "w-32" : r % 3 === 1 ? "w-24" : "w-28"}`} />
+              </div>
+              {cols.map((i) => (
+                <div key={i} className="flex flex-1 justify-center px-4 py-3.5">
+                  <Skeleton className="h-4 w-6" />
+                </div>
+              ))}
+              <div className="flex flex-1 justify-center px-5 py-3.5">
+                <Skeleton className="h-6 w-10 rounded-full" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </Panel>
   );
 }

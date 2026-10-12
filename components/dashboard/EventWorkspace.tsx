@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { WeekSelector } from "@/components/dashboard/WeekSelector";
-import { PointsTable } from "@/components/dashboard/PointsTable";
+import { PointsTable, PointsTableSkeleton } from "@/components/dashboard/PointsTable";
 import { BulkImportButton } from "@/components/dashboard/BulkImportButton";
 import { AddParticipantsButton } from "@/components/dashboard/AddParticipantsButton";
 import { ExportEventButton } from "@/components/dashboard/ExportEventButton";
@@ -11,9 +11,9 @@ import { DeleteEventButton } from "@/components/dashboard/DeleteEventButton";
 import { useCanEdit } from "@/components/auth/RoleProvider";
 import { IconButton, IconLink } from "@/components/common/IconButton";
 import { PencilIcon, TrophyIcon } from "@/components/common/icons";
-import { Loading } from "@/components/common/Loading";
 import { ErrorState } from "@/components/common/ErrorState";
 import { Panel } from "@/components/common/Panel";
+import { Skeleton, SkeletonRegion } from "@/components/common/Skeleton";
 import { defaultWeek, formatWeekLabel, getToday } from "@/lib/week";
 import type { Event, EventWeek, PointsTableRow } from "@/types";
 
@@ -207,7 +207,9 @@ export function EventWorkspace({
       ) : error ? (
         <ErrorState message={error} onRetry={loadPoints} />
       ) : rows === null ? (
-        <Loading label="Loading points…" />
+        <SkeletonRegion label="Loading points…">
+          <PointsTableSkeleton />
+        </SkeletonRegion>
       ) : (
         <PointsTable
           rows={rows}
@@ -229,6 +231,30 @@ export function EventWorkspace({
           }}
         />
       )}
+    </div>
+  );
+}
+
+// The workspace's title row, week picker and actions, then the table.
+export function EventWorkspaceSkeleton() {
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex items-center gap-3">
+        <Skeleton className="h-8 w-64 max-w-[60%] sm:h-9" />
+        <Skeleton className="h-7 w-20 rounded-full bg-accent-soft" />
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <Skeleton className="h-10 w-48 rounded-field" />
+          <Skeleton className="h-10 w-28 rounded-full" />
+        </div>
+        <div className="flex items-center gap-2">
+          {[0, 1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-10 w-10 rounded-full" />
+          ))}
+        </div>
+      </div>
+      <PointsTableSkeleton />
     </div>
   );
 }

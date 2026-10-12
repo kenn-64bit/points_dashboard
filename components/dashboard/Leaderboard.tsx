@@ -1,6 +1,7 @@
 import type { LeaderboardRow } from "@/types";
 import { Badge } from "@/components/common/Badge";
 import { Panel } from "@/components/common/Panel";
+import { Skeleton, SkeletonLabel } from "@/components/common/Skeleton";
 import { ordinal } from "@/lib/points";
 
 const RANK_BADGES: Record<number, string> = { 1: "🥇", 2: "🥈", 3: "🥉" };
@@ -64,6 +65,23 @@ export function Leaderboard({ rows }: { rows: LeaderboardRow[] }) {
           </div>
         );
       })}
+    </Panel>
+  );
+}
+
+export function LeaderboardSkeleton({ rows = 8 }: { rows?: number }) {
+  return (
+    <Panel label={<SkeletonLabel className="w-16" />} bodyClassName="divide-y divide-dashed divide-line px-4 sm:px-5">
+      {Array.from({ length: rows }, (_, i) => (
+        <div key={i} className="flex items-center gap-3 py-3">
+          <div className="flex w-[4.75rem] shrink-0 items-center gap-2">
+            {i < 3 ? <Skeleton className="h-8 w-8 rounded-full" /> : <span className="h-8 w-8 shrink-0" />}
+            <Skeleton className="h-4 w-7" />
+          </div>
+          <Skeleton className="h-11 flex-1 rounded-full bg-bar-track" />
+          <Skeleton className="h-8 w-16 shrink-0 rounded-full" />
+        </div>
+      ))}
     </Panel>
   );
 }

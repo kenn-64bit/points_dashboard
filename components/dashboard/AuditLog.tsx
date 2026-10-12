@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AUDIT_AREAS, describeAudit, type AuditArea, type AuditFilters } from "@/lib/audit";
 import { ROLE_LABELS } from "@/lib/auth/roles";
 import { Panel } from "@/components/common/Panel";
+import { Skeleton, SkeletonLabel } from "@/components/common/Skeleton";
 import { Badge } from "@/components/common/Badge";
 import { LocalTime } from "@/components/common/LocalTime";
 import { buttonClasses } from "@/components/common/Button";
@@ -151,6 +152,34 @@ export function AuditLog({
           )}
         </div>
       )}
+    </>
+  );
+}
+
+export function AuditLogSkeleton({ rows = 8 }: { rows?: number }) {
+  return (
+    <>
+      <div className="mb-3 flex flex-wrap items-center gap-1">
+        {["w-12", "w-16", "w-20", "w-16", "w-14"].map((w, i) => (
+          <Skeleton key={i} className={`h-8 rounded-full ${w}`} />
+        ))}
+      </div>
+      <Panel label={<SkeletonLabel className="w-20" />} className="mt-4">
+        <div className="divide-y divide-dashed divide-line">
+          {Array.from({ length: rows }, (_, i) => (
+            <div key={i} className="flex flex-col gap-1.5 px-5 py-3.5 sm:flex-row sm:items-center sm:gap-5">
+              <Skeleton className="h-3 w-28 shrink-0" />
+              <div className="min-w-0 flex-1 space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-4 w-40" />
+                  <Skeleton className="h-5 w-14 rounded-full" />
+                </div>
+                <Skeleton className={`h-4 ${i % 2 ? "w-3/5" : "w-4/5"}`} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </Panel>
     </>
   );
 }

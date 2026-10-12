@@ -7,6 +7,7 @@ import { APP_USER_ROLES, ROLE_DESCRIPTIONS, ROLE_LABELS } from "@/lib/auth/roles
 import { MIN_PASSWORD_LENGTH, MAX_EMAIL_LENGTH, MAX_PASSWORD_LENGTH } from "@/lib/validation";
 import { useToast } from "@/components/common/Toast";
 import { Panel } from "@/components/common/Panel";
+import { Skeleton, SkeletonLabel } from "@/components/common/Skeleton";
 import { Badge } from "@/components/common/Badge";
 import { Modal } from "@/components/common/Modal";
 import { Button } from "@/components/common/Button";
@@ -401,5 +402,28 @@ export function TeamManager({ initialMembers, currentEmail }: { initialMembers: 
         </ConfirmDialog>
       )}
     </>
+  );
+}
+
+export function TeamManagerSkeleton({ rows = 4 }: { rows?: number }) {
+  return (
+    <Panel label={<SkeletonLabel className="w-20" />} bodyClassName="divide-y divide-dashed divide-line">
+      {Array.from({ length: rows }, (_, i) => (
+        <div key={i} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 px-5 py-4">
+          <div className="min-w-0 flex-1 space-y-1.5">
+            <Skeleton className={`h-4 ${i % 2 ? "w-44" : "w-56"} max-w-full`} />
+            <Skeleton className="h-3 w-28" />
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <Skeleton className="h-9 w-28 rounded-field" />
+            <Skeleton className="h-9 w-9 rounded-full" />
+            <Skeleton className="h-9 w-9 rounded-full" />
+          </div>
+        </div>
+      ))}
+      <div className="px-5 py-3.5">
+        <Skeleton className="h-4 w-28" />
+      </div>
+    </Panel>
   );
 }

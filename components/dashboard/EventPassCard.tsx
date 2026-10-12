@@ -5,6 +5,7 @@ import { EVENT_TYPE_LABELS } from "@/types";
 import type { Event, EventSummary } from "@/types";
 import { EventTypeIcon, PASS_CLASSES, eventTypeOf } from "@/components/dashboard/eventType";
 import { formatDateSpan } from "@/lib/week";
+import { Skeleton } from "@/components/common/Skeleton";
 
 function CalendarIcon() {
   return (
@@ -87,9 +88,9 @@ export function EventPassCard({
   action?: React.ReactNode;
 }) {
   const type = eventTypeOf(event);
-  const pending = failed ? "—" : "…";
+  const pending = failed ? "—" : <Skeleton className="h-4 w-20 bg-surface/60" />;
   const created = new Date(event.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-  let runs = "Loading weeks…";
+  let runs: React.ReactNode = <Skeleton className="h-4 w-44 bg-surface/60" />;
   if (failed) runs = "Couldn't load weeks";
   else if (summary) {
     runs =
@@ -145,7 +146,7 @@ export function EventPassCard({
             {event.event_name}
           </h2>
           <span aria-hidden className="mt-1 block border-t-2 border-dashed border-current opacity-40" />
-          <p className="mt-2 text-sm font-bold">{runs}</p>
+          <div className="mt-2 text-sm font-bold">{runs}</div>
         </div>
       </div>
 

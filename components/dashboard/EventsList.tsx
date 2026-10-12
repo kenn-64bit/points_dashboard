@@ -7,6 +7,7 @@ import { CreateEventButton } from "@/components/dashboard/CreateEventButton";
 import { useCanEdit } from "@/components/auth/RoleProvider";
 import { EventTypePill, eventTypeOf } from "@/components/dashboard/eventType";
 import { Panel } from "@/components/common/Panel";
+import { Skeleton, SkeletonLabel } from "@/components/common/Skeleton";
 import { Badge } from "@/components/common/Badge";
 import { ChevronDownIcon } from "@/components/common/Select";
 
@@ -100,5 +101,31 @@ export function EventsList({ events }: { events: Event[] }) {
         <EventPassModal event={passEvent} onClose={() => setPassEvent(null)} onUpdated={setPassEvent} />
       )}
     </>
+  );
+}
+
+// Two months of events, shaped like the list.
+export function EventsListSkeleton() {
+  const months = [3, 2];
+  return (
+    <Panel label={<SkeletonLabel />} bodyClassName="divide-y divide-border">
+      {months.map((count, m) => (
+        <div key={m} className="divide-y divide-dashed divide-line">
+          <div className="flex items-center justify-between bg-surface-muted px-5 py-3.5">
+            <Skeleton className="h-5 w-36 bg-border" />
+            <Skeleton className="h-4 w-4 bg-border" />
+          </div>
+          {Array.from({ length: count }, (_, i) => (
+            <div key={i} className="flex items-center justify-between gap-4 px-5 py-3.5">
+              <Skeleton className={`h-4 ${i % 2 ? "w-40" : "w-56"} max-w-full`} />
+              <span className="flex shrink-0 items-center gap-3">
+                <Skeleton className="h-6 w-24 rounded-full" />
+                <Skeleton className="h-6 w-6 rounded-full" />
+              </span>
+            </div>
+          ))}
+        </div>
+      ))}
+    </Panel>
   );
 }
