@@ -57,8 +57,17 @@ export interface Event {
   month: string;
 }
 
+// One week of an event: the dates picked through "Add Week", 1–7 days long.
+// It can start on any weekday; week_date (its first day) is what points rows
+// are keyed to. Each weekday occurs at most once, so the monday…sunday points
+// columns each map to exactly one date of the week.
+export interface EventWeek {
+  week_date: string;
+  end_date: string;
+}
+
 export interface EventSummary {
-  weeks: string[]; // Mondays with at least one points row, oldest first
+  weeks: EventWeek[]; // oldest first
   participant_count: number;
 }
 
@@ -97,7 +106,7 @@ export interface LeaderboardRow {
 // Read-only JSON for the Discord bot in bot/. Keep in sync with
 // bot/src/api/types.ts, which copies these so the bot can deploy on its own.
 
-// event = all of an event's weeks, week = one Monday–Sunday week, day = one day.
+// event = all of an event's weeks, week = the week a date falls in, day = one day.
 export const BOT_TIMEFRAMES = ["event", "week", "day"] as const;
 
 export type BotTimeframe = (typeof BOT_TIMEFRAMES)[number];
@@ -118,9 +127,9 @@ export interface BotPlayer {
 
 export interface BotPeriod {
   timeframe: BotTimeframe;
-  week_date: string | null; // the week's Monday (week and day timeframes)
-  date: string | null; // the day itself (day timeframe)
-  label: string; // "All weeks · Sep 7 - Oct 4, 2026", "Week 2 · Sep 21 - 27, 2026", "Tue, Sep 22, 2026"
+  week_date: string | null; // the week's first day (one event's week and day timeframes)
+  date: string | null; // the day asked about (day timeframe, and the week timeframe for all events)
+  label: string; // "All weeks · Sep 7 - Oct 4, 2026", "Week 2 · Sep 21 - 25, 2026", "Tue, Sep 22, 2026"
 }
 
 export interface BotLeaderboard {

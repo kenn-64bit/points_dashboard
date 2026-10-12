@@ -1,5 +1,6 @@
 import "server-only";
 import { DAY_COLUMNS } from "@/types";
+import { addDays } from "@/lib/week";
 import type { AppUserRole, AuditRow } from "@/types";
 
 // In-memory stand-in for the Supabase client, used only when
@@ -49,6 +50,7 @@ interface MockAppUser {
 interface MockEventWeek {
   event_id: string;
   week_date: string;
+  end_date: string;
   created_at: string;
 }
 
@@ -89,6 +91,8 @@ const store = globalForMock.__dpmMockStore ?? buildSeedStore();
 // A store kept from before app_users existed won't have the key.
 store.app_users ??= seedAppUsers();
 store.event_weeks ??= [];
+// Weeks kept from before picked ranges ran Monday–Sunday.
+for (const week of store.event_weeks) week.end_date ??= addDays(week.week_date, 6);
 store.audit_log ??= [];
 globalForMock.__dpmMockStore = store;
 
@@ -101,6 +105,7 @@ function nextAuditId(): number {
 
 type Row = Record<string, unknown>;
 type Filter = [string, unknown];
+type Comparison = "lt" | "gte" | "lte";
 type Op =
   | { kind: "select" }
   | { kind: "insert"; payload: Row | Row[] }
@@ -128,7 +133,7 @@ function likePatternToRegExp(pattern: string): RegExp {
 class MockQueryBuilder<T extends Row> implements PromiseLike<{ data: unknown; error: { message: string } | null }> {
   private filters: Filter[] = [];
   private inFilters: [string, unknown[]][] = [];
-  private ltFilters: Filter[] = [];
+  private compareFilters: [string, Comparison, number | string][] = [];
   private ilikeFilters: [string, RegExp][] = [];
   private orderSpec: { col: string; ascending: boolean } | null = null;
   private rangeSpec: { from: number; to: number } | null = null;
@@ -151,8 +156,16 @@ class MockQueryBuilder<T extends Row> implements PromiseLike<{ data: unknown; er
     this.inFilters.push([col, values]);
     return this;
   }
-  lt(col: string, value: unknown) {
-    this.ltFilters.push([col, value]);
+  lt(col: string, value: number | string) {
+    this.compareFilters.push([col, "lt", value]);
+    return this;
+  }
+  gte(col: string, value: number | string) {
+    this.compareFilters.push([col, "gte", value]);
+    return this;
+  }
+  lte(col: string, value: number | string) {
+    this.compareFilters.push([col, "lte", value]);
     return this;
   }
   ilike(col: string, pattern: string) {
@@ -212,7 +225,10 @@ class MockQueryBuilder<T extends Row> implements PromiseLike<{ data: unknown; er
     return (
       this.filters.every(([col, value]) => (row as Row)[col] === value) &&
       this.inFilters.every(([col, values]) => values.includes((row as Row)[col])) &&
-      this.ltFilters.every(([col, value]) => ((row as Row)[col] as number | string) < (value as number | string)) &&
+      this.compareFilters.every(([col, op, value]) => {
+        const cell = (row as Row)[col] as number | string;
+        return op === "lt" ? cell < value : op === "gte" ? cell >= value : cell <= value;
+      }) &&
       this.ilikeFilters.every(([col, pattern]) => pattern.test(String((row as Row)[col] ?? "")))
     );
   }
@@ -252,7 +268,8 @@ class MockQueryBuilder<T extends Row> implements PromiseLike<{ data: unknown; er
       };
     }
     if (this.table === "event_weeks") {
-      return { event_id: payload.event_id, week_date: payload.week_date, created_at: now };
+      const week_date = payload.week_date as string;
+      return { event_id: payload.event_id, week_date, end_date: payload.end_date ?? addDays(week_date, 6), created_at: now };
     }
     if (this.table === "audit_log") {
       return {

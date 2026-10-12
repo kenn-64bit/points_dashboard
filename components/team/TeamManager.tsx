@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import type { AppUserRole, TeamMember } from "@/types";
 import { APP_USER_ROLES, ROLE_DESCRIPTIONS, ROLE_LABELS } from "@/lib/auth/roles";
 import { MIN_PASSWORD_LENGTH, MAX_EMAIL_LENGTH, MAX_PASSWORD_LENGTH } from "@/lib/validation";
@@ -201,6 +202,7 @@ function AddMemberModal({ onCancel, onAdded }: { onCancel: () => void; onAdded: 
 }
 
 function ResetPasswordModal({ email, onDone }: { email: string; onDone: () => void }) {
+  const router = useRouter();
   const { showToast } = useToast();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -214,6 +216,8 @@ function ResetPasswordModal({ email, onDone }: { email: string; onDone: () => vo
     try {
       await sendJson(memberUrl(email), "PATCH", { password });
       showToast(`Password reset for ${email}`);
+      // Like every team change: see TeamManager.
+      router.refresh();
       onDone();
     } catch (err) {
       showToast((err as Error).message, "error");
@@ -246,7 +250,11 @@ function ResetPasswordModal({ email, onDone }: { email: string; onDone: () => vo
   );
 }
 
+// Every successful change calls router.refresh(), which drops the copies
+// Next.js keeps of pages rendered before it, so leaving and coming back (or
+// the back button) shows the team as it is now.
 export function TeamManager({ initialMembers, currentEmail }: { initialMembers: TeamMember[]; currentEmail: string }) {
+  const router = useRouter();
   const { showToast } = useToast();
   const [members, setMembers] = useState(initialMembers);
   const [adding, setAdding] = useState(false);
@@ -264,6 +272,7 @@ export function TeamManager({ initialMembers, currentEmail }: { initialMembers: 
       const body = await sendJson(memberUrl(email), "PATCH", { role });
       setMembers((prev) => prev.map((m) => (m.email === email ? body.member : m)));
       showToast(`${email} is now ${ROLE_LABELS[role].toLowerCase()}`);
+      router.refresh();
     } catch (err) {
       showToast((err as Error).message, "error");
     } finally {
@@ -279,6 +288,7 @@ export function TeamManager({ initialMembers, currentEmail }: { initialMembers: 
       setMembers((prev) => prev.filter((m) => m.email !== removing));
       showToast(`${removing} removed`);
       setRemoving(null);
+      router.refresh();
     } catch (err) {
       showToast((err as Error).message, "error");
     } finally {
@@ -346,6 +356,7 @@ export function TeamManager({ initialMembers, currentEmail }: { initialMembers: 
           onAdded={(member) => {
             setMembers((prev) => [...prev, member]);
             setAdding(false);
+            router.refresh();
           }}
         />
       )}

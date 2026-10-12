@@ -5,11 +5,18 @@ import { parseImportFile } from "@/lib/import/parseImportFile";
 import { errorResponse } from "@/lib/apiError";
 import { requireApiUser } from "@/lib/auth/dal";
 import { canEdit } from "@/lib/auth/roles";
-import { isWithinMaxSize, hasAllowedExtension, isValidUUID, MAX_IMPORT_FILE_SIZE } from "@/lib/validation";
-import { normalizeToMonday, getCurrentWeekMonday } from "@/lib/week";
+import { isWithinMaxSize, hasAllowedExtension, isValidDateStr, isValidUUID, MAX_IMPORT_FILE_SIZE } from "@/lib/validation";
+import { formatWeekRange, resolveWeek, weekDays } from "@/lib/week";
+import { loadEventWeeks } from "@/lib/eventData";
 import { logAudit } from "@/lib/audit";
-import type { BulkImportResult, ImportRowError, ParsedImportRow } from "@/types";
+import type { BulkImportResult, Day, ImportRowError, ParsedImportRow } from "@/types";
 import { DAY_COLUMNS } from "@/types";
+
+const ZERO_DAYS = Object.fromEntries(DAY_COLUMNS.map((day) => [day, 0])) as Record<Day, number>;
+const DAY_HEADERS = Object.fromEntries(DAY_COLUMNS.map((day) => [day, day[0].toUpperCase() + day.slice(1)])) as Record<
+  Day,
+  string
+>;
 
 // Rows are written in fixed-size chunks rather than one giant upsert, keeping
 // each round trip's payload and response reasonably sized.
@@ -54,7 +61,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "File too large. Max 5MB." }, { status: 400 });
     }
 
-    const weekDate = typeof weekParam === "string" && weekParam ? normalizeToMonday(weekParam) : getCurrentWeekMonday();
+    if (typeof weekParam !== "string" || !isValidDateStr(weekParam)) {
+      return NextResponse.json({ error: "A valid week_date is required" }, { status: 400 });
+    }
+    const week = resolveWeek(await loadEventWeeks(eventId), weekParam);
+    if (!week) return NextResponse.json({ error: "That week isn't part of this event" }, { status: 400 });
+    const weekDate = week.week_date;
 
     const buffer = await file.arrayBuffer();
     const parsed = await parseImportFile(buffer, file.name);
@@ -65,20 +77,42 @@ export async function POST(request: NextRequest) {
 
     const supabase = getSupabaseAdmin();
     const errors: ImportRowError[] = [...parsed.invalidRows];
+
+    // Points can only go on the week's own days. A total-only row has no daily
+    // breakdown, so its total goes on the week's last day.
+    const days = weekDays(week);
+    const lastDay = days.at(-1)!.day;
+    const inWeek = new Set(days.map((d) => d.day));
+    const validRows: ParsedImportRow[] = [];
+    for (const row of parsed.validRows) {
+      if (row.format === "total") {
+        validRows.push({ ...row, ...ZERO_DAYS, [lastDay]: row.total_points });
+        continue;
+      }
+      const outside = DAY_COLUMNS.find((day) => !inWeek.has(day) && row[day] !== 0);
+      if (outside) {
+        errors.push({
+          row: row.rowNumber,
+          message: `${DAY_HEADERS[outside]} isn't part of ${formatWeekRange(week)} ("${row.discord_username}")`,
+        });
+      } else {
+        validRows.push(row);
+      }
+    }
     let createdUsers = 0;
     let updatedUsers = 0;
 
     // Resolve every username in one batch (one lookup + one upsert) instead of
     // per-row round trips — a multi-hundred-row file would otherwise risk
     // exceeding a serverless function's execution time limit.
-    const usernames = parsed.validRows.map((row) => row.discord_username);
+    const usernames = validRows.map((row) => row.discord_username);
     const batch = await resolveDiscordIdsBatch(supabase, usernames);
     createdUsers += batch.createdCount;
 
     // Rare fallback: a username the batch upsert still couldn't resolve
     // (e.g. a PK-slug collision) is retried individually.
     const rowsByUsername = new Map<string, ParsedImportRow[]>();
-    for (const row of parsed.validRows) {
+    for (const row of validRows) {
       const list = rowsByUsername.get(row.discord_username) ?? [];
       list.push(row);
       rowsByUsername.set(row.discord_username, list);
@@ -95,7 +129,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const pointsPayloads = parsed.validRows
+    const pointsPayloads = validRows
       .filter((row) => batch.idsByUsername.has(row.discord_username))
       .map((row) => {
         const payload: Record<string, string | number> = {
@@ -123,7 +157,7 @@ export async function POST(request: NextRequest) {
 
     const result: BulkImportResult = {
       success: errors.length === 0,
-      imported: parsed.validRows.length,
+      imported: validRows.length,
       created_users: createdUsers,
       updated_users: updatedUsers,
       failed: errors.length,

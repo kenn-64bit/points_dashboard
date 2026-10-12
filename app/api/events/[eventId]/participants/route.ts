@@ -5,7 +5,8 @@ import { errorResponse } from "@/lib/apiError";
 import { requireApiUser } from "@/lib/auth/dal";
 import { canEdit } from "@/lib/auth/roles";
 import { isValidUUID, isValidDateStr, parseUsername } from "@/lib/validation";
-import { isMonday } from "@/lib/week";
+import { resolveWeek } from "@/lib/week";
+import { loadEventWeeks } from "@/lib/eventData";
 import { logAudit } from "@/lib/audit";
 import { DAY_COLUMNS } from "@/types";
 
@@ -26,8 +27,11 @@ export async function POST(request: NextRequest, { params }: Params) {
 
     const body = await request.json();
     const { week_date, usernames } = body ?? {};
-    if (typeof week_date !== "string" || !isValidDateStr(week_date) || !isMonday(week_date)) {
-      return NextResponse.json({ error: "week_date must be a Monday (YYYY-MM-DD)" }, { status: 400 });
+    if (typeof week_date !== "string" || !isValidDateStr(week_date)) {
+      return NextResponse.json({ error: "Invalid week_date" }, { status: 400 });
+    }
+    if (!resolveWeek(await loadEventWeeks(eventId), week_date)) {
+      return NextResponse.json({ error: "That week isn't part of this event" }, { status: 400 });
     }
     if (!Array.isArray(usernames) || usernames.some((u) => typeof u !== "string")) {
       return NextResponse.json({ error: "usernames must be a list of names" }, { status: 400 });

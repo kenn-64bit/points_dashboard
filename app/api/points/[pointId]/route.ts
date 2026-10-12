@@ -5,6 +5,8 @@ import { requireApiUser } from "@/lib/auth/dal";
 import { canEdit } from "@/lib/auth/roles";
 import { isValidUUID, isValidDayValue } from "@/lib/validation";
 import { diffDays, logAudit } from "@/lib/audit";
+import { loadEventWeeks } from "@/lib/eventData";
+import { mondayWeek, weekHasDay } from "@/lib/week";
 import { DAY_COLUMNS } from "@/types";
 
 type Params = { params: Promise<{ pointId: string }> };
@@ -38,6 +40,13 @@ export async function PUT(request: NextRequest, { params }: Params) {
       .maybeSingle();
     if (readError) return errorResponse(readError);
     if (!before) return NextResponse.json({ error: "Points row not found" }, { status: 404 });
+
+    // Days outside the row's week always stay 0.
+    const weeks = await loadEventWeeks(before.event_id);
+    const week = weeks.find((w) => w.week_date === before.week_date) ?? mondayWeek(before.week_date);
+    for (const day of DAY_COLUMNS) {
+      if (payload[day] !== undefined && !weekHasDay(week, day)) payload[day] = 0;
+    }
 
     const { data, error } = await supabase
       .from("points")

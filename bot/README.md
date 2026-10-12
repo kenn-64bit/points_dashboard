@@ -9,7 +9,7 @@ Slash commands that bring the Discord Points Manager's leaderboards into Discord
 | --- | --- |
 | `event` | Pick an event from the list, or **All events**. Default: the latest event, meaning the one with the most recent week of points. |
 | `timeframe` | **Per event** (all weeks; the default), **Per week** or **Per day**. |
-| `date` | For a week or a day: `YYYY-MM-DD`, `today` or `yesterday`. Any day selects its Monday–Sunday week. Default: today in `BOT_TIMEZONE`. |
+| `date` | For a week or a day: `YYYY-MM-DD`, `today` or `yesterday`. Any day selects the event's week that includes it (for all events, each event's own week). Default: today in `BOT_TIMEZONE`. |
 | `player` | Pick from the list or type a name. Default: you, matched by your Discord username, display name or server nickname. |
 
 Players tied on points share a rank (1, 2, 2, 4). Players with no points in the period aren't listed. Replies are public; errors are shown only to the person who ran the command. Only that person can turn a leaderboard's pages.

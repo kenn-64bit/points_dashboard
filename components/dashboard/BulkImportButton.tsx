@@ -11,7 +11,7 @@ import { Badge } from "@/components/common/Badge";
 import { inputClasses } from "@/components/common/Field";
 import { hasAllowedExtension, isWithinMaxSize, ALLOWED_IMPORT_EXTENSIONS } from "@/lib/validation";
 import { formatWeekLabel } from "@/lib/week";
-import type { BulkImportResult } from "@/types";
+import type { BulkImportResult, EventWeek } from "@/types";
 
 export function BulkImportButton({
   eventId,
@@ -20,7 +20,7 @@ export function BulkImportButton({
   onImported,
 }: {
   eventId: string;
-  week: string;
+  week: EventWeek;
   weekNumber: number;
   onImported: () => void;
 }) {
@@ -69,7 +69,7 @@ export function BulkImportButton({
       const formData = new FormData();
       formData.append("file", file);
       formData.append("event_id", eventId);
-      formData.append("week_date", week);
+      formData.append("week_date", week.week_date);
 
       const res = await fetch("/api/users/bulk-import", { method: "POST", body: formData });
       const body: Partial<BulkImportResult> & { error?: string } = await res.json();

@@ -2,7 +2,7 @@
 // types in the dashboard's types/index.ts, kept here so the bot can deploy on
 // its own. Keep the two in sync.
 
-// event = all of an event's weeks, week = one Monday–Sunday week, day = one day.
+// event = all of an event's weeks, week = the week a date falls in, day = one day.
 export type BotTimeframe = "event" | "week" | "day";
 
 export type EventType = "game_night" | "tournament" | "challenge" | "giveaway" | "community" | "other";
@@ -23,9 +23,9 @@ export interface BotPlayer {
 
 export interface BotPeriod {
   timeframe: BotTimeframe;
-  week_date: string | null; // the week's Monday (week and day timeframes)
-  date: string | null; // the day itself (day timeframe)
-  label: string; // "All weeks · Sep 7 - Oct 4, 2026", "Week 2 · Sep 21 - 27, 2026", "Tue, Sep 22, 2026"
+  week_date: string | null; // the week's first day (one event's week and day timeframes)
+  date: string | null; // the day asked about (day timeframe, and the week timeframe for all events)
+  label: string; // "All weeks · Sep 7 - Oct 4, 2026", "Week 2 · Sep 21 - 25, 2026", "Tue, Sep 22, 2026"
 }
 
 export interface LeaderboardRow {

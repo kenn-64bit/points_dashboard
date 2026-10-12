@@ -147,8 +147,9 @@ export async function parseImportFile(
         return;
       }
       // No daily breakdown exists for total-only rows; the value is placed on
-      // Sunday so the stored total still reflects it. Surfaced in the import
-      // preview as "Total-only" rather than implying real Sunday activity.
+      // Sunday here, and the import route moves it to the week's last day, so
+      // the stored total still reflects it. Surfaced in the import preview as
+      // "Total-only" rather than implying real activity on that day.
       const days: DayValues = {
         monday: 0, tuesday: 0, wednesday: 0, thursday: 0, friday: 0, saturday: 0, sunday: parsedTotal,
       };

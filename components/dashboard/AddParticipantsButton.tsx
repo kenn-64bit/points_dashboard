@@ -11,6 +11,7 @@ import { UserPlusIcon } from "@/components/common/icons";
 import { formatWeekLabel } from "@/lib/week";
 import { stripDisallowed } from "@/lib/text";
 import { MAX_USERNAME_LENGTH } from "@/lib/validation";
+import type { EventWeek } from "@/types";
 
 type NameRow = { id: number; name: string };
 
@@ -21,7 +22,7 @@ export function AddParticipantsButton({
   onAdded,
 }: {
   eventId: string;
-  week: string;
+  week: EventWeek;
   weekNumber: number;
   onAdded: () => void;
 }) {
@@ -70,7 +71,7 @@ export function AddParticipantsButton({
       const res = await fetch(`/api/events/${eventId}/participants`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ week_date: week, usernames: rows.map((r) => r.name) }),
+        body: JSON.stringify({ week_date: week.week_date, usernames: rows.map((r) => r.name) }),
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body.error ?? "Failed to add participants");

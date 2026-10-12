@@ -10,9 +10,12 @@ A web dashboard for running points-based events in a Discord community. Staff cr
 - Each event has its own workspace with a summary of its weeks and participants.
 
 ### Weekly points
-- Points are tracked per participant, per week, with one value for each day (Monday–Sunday) and a running total.
-- Weeks always start on a Monday. Whatever date you pick is moved back to that week's Monday.
-- Weeks are labelled by their place in the event, e.g. `Week 2 · Sep 21 - 27, 2026`.
+- Points are tracked per participant, per week, with one value for each day of the week and a running total.
+- A week is exactly the dates you pick under **Add Week**, from 1 to 7 days, starting on any day. A longer range is split into 7-day weeks from its first day, and the last one can be shorter.
+- An event shows only the weeks you add (a new event starts with none). No week is added for you.
+- A day can belong to only one week of an event, so dates already in a week can't be picked again. Past dates can be added too.
+- Deleting a week removes it and all of its points for good, and frees its dates. It stays gone when you leave the page and come back, including with the browser's back button.
+- Weeks are labelled by their place in the event, e.g. `Week 2 · Sep 21 - 25, 2026`. Deleting a week renumbers the others but never changes their dates.
 - Editors can add or remove weeks, add participants, and set, change or clear any participant's points in a points table.
 
 ### Leaderboard
@@ -20,7 +23,7 @@ A web dashboard for running points-based events in a Discord community. Staff cr
 
 ### Bulk import
 - Load a whole roster of points at once from a **CSV** or **Excel (.xlsx)** file.
-- Expected columns: `Discord Username`, `Monday` through `Sunday`, and optionally `Total Points`.
+- Expected columns: `Discord Username`, a column for each day of the week (`Monday` through `Sunday`), and optionally `Total Points`. A value on a day that isn't part of the week is reported as a row problem.
 - Rows are checked before anything is saved, and problems are reported row by row.
 
 ### Exports

@@ -7,12 +7,13 @@ import { Button, buttonClasses } from "@/components/common/Button";
 import { IconButton } from "@/components/common/IconButton";
 import { DownloadIcon } from "@/components/common/icons";
 import { MenuItem, MenuList, MenuPanel, SelectTrigger } from "@/components/common/Select";
+import type { EventWeek } from "@/types";
 
 // `weeks` are oldest first; the single-week export defaults to the latest.
-export function ExportEventButton({ eventId, weeks }: { eventId: string; weeks: string[] }) {
+export function ExportEventButton({ eventId, weeks }: { eventId: string; weeks: EventWeek[] }) {
   const [open, setOpen] = useState(false);
   const [pickedWeek, setPickedWeek] = useState<string | null>(null);
-  const selectedWeek = pickedWeek && weeks.includes(pickedWeek) ? pickedWeek : (weeks.at(-1) ?? "");
+  const selectedWeek = weeks.find((w) => w.week_date === pickedWeek) ?? weeks.at(-1);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -54,17 +55,17 @@ export function ExportEventButton({ eventId, weeks }: { eventId: string; weeks: 
                 <div className="mt-3 flex flex-wrap items-center gap-3">
                   <div ref={containerRef} className="relative">
                     <SelectTrigger open={dropdownOpen} onClick={() => setDropdownOpen((o) => !o)} className="bg-surface">
-                      {formatWeekRange(selectedWeek)}
+                      {selectedWeek && formatWeekRange(selectedWeek)}
                     </SelectTrigger>
                     {dropdownOpen && (
                       <MenuPanel className="w-60">
                         <MenuList>
                           {weeks.map((week) => (
                             <MenuItem
-                              key={week}
-                              selected={week === selectedWeek}
+                              key={week.week_date}
+                              selected={week.week_date === selectedWeek?.week_date}
                               onSelect={() => {
-                                setPickedWeek(week);
+                                setPickedWeek(week.week_date);
                                 setDropdownOpen(false);
                               }}
                             >
@@ -75,8 +76,8 @@ export function ExportEventButton({ eventId, weeks }: { eventId: string; weeks: 
                       </MenuPanel>
                     )}
                   </div>
-                  <a href={`/api/events/${eventId}/export?week=${selectedWeek}`} className={buttonClasses("primary")}>
-                    Export {formatWeekRange(selectedWeek)}
+                  <a href={`/api/events/${eventId}/export?week=${selectedWeek?.week_date}`} className={buttonClasses("primary")}>
+                    Export {selectedWeek && formatWeekRange(selectedWeek)}
                   </a>
                 </div>
               </div>

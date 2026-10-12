@@ -8,8 +8,8 @@ import { buttonClasses } from "@/components/common/Button";
 import { loadWeekPoints } from "@/lib/weekPoints";
 import { loadEventWeeks } from "@/lib/eventData";
 import { isValidUUID } from "@/lib/validation";
-import { getCurrentWeekMonday } from "@/lib/week";
-import type { Event, PointsTableRow } from "@/types";
+import { defaultWeek, getToday } from "@/lib/week";
+import type { Event, EventWeek, PointsTableRow } from "@/types";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +27,7 @@ async function loadEvent(eventId: string): Promise<{ event: Event } | { error: s
   }
 }
 
-async function loadWeeks(eventId: string): Promise<string[]> {
+async function loadWeeks(eventId: string): Promise<EventWeek[]> {
   try {
     return await loadEventWeeks(eventId);
   } catch (err) {
@@ -37,7 +37,7 @@ async function loadWeeks(eventId: string): Promise<string[]> {
 }
 
 // Server-rendered first week, so the table arrives with the page. The client
-// refetches only if its local "current week" differs (see EventWorkspace).
+// refetches only if its local "today" picks a different week (see EventWorkspace).
 async function loadInitialPoints(eventId: string, weekDate: string): Promise<PointsTableRow[] | null> {
   try {
     return await loadWeekPoints(eventId, weekDate);
@@ -52,12 +52,9 @@ export default async function EventDetailPage({ params }: { params: Promise<{ ev
   const { eventId } = await params;
   if (!isValidUUID(eventId)) notFound();
 
-  const initialWeek = getCurrentWeekMonday();
-  const [result, weeks, initialRows] = await Promise.all([
-    loadEvent(eventId),
-    loadWeeks(eventId),
-    loadInitialPoints(eventId, initialWeek),
-  ]);
+  const [result, weeks] = await Promise.all([loadEvent(eventId), loadWeeks(eventId)]);
+  const initialWeek = defaultWeek(weeks, getToday());
+  const initialRows = initialWeek ? await loadInitialPoints(eventId, initialWeek) : null;
 
   if ("notFound" in result) notFound();
 

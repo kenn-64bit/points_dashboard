@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { EVENT_TYPE_LABELS } from "@/types";
 import type { Event, EventSummary } from "@/types";
 import { EventTypeIcon, PASS_CLASSES, eventTypeOf } from "@/components/dashboard/eventType";
-import { formatWeeksSpan } from "@/lib/week";
+import { formatDateSpan } from "@/lib/week";
 
 function CalendarIcon() {
   return (
@@ -95,7 +95,7 @@ export function EventPassCard({
     runs =
       summary.weeks.length === 0
         ? "No weeks yet"
-        : `Runs ${formatWeeksSpan(summary.weeks[0], summary.weeks[summary.weeks.length - 1])}`;
+        : `Runs ${formatDateSpan(summary.weeks[0].week_date, summary.weeks[summary.weeks.length - 1].end_date)}`;
   }
 
   return (

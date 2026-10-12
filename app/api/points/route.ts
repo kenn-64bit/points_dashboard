@@ -4,7 +4,8 @@ import { errorResponse, unauthorizedResponse } from "@/lib/apiError";
 import { getCurrentUser, requireApiUser } from "@/lib/auth/dal";
 import { canEdit } from "@/lib/auth/roles";
 import { isValidUUID, isValidDateStr, isValidDayValue } from "@/lib/validation";
-import { isMonday } from "@/lib/week";
+import { resolveWeek, weekHasDay } from "@/lib/week";
+import { loadEventWeeks } from "@/lib/eventData";
 import { loadWeekPoints } from "@/lib/weekPoints";
 import { logAudit } from "@/lib/audit";
 import { DAY_COLUMNS } from "@/types";
@@ -40,14 +41,17 @@ export async function POST(request: NextRequest) {
     if (typeof discord_id !== "string" || !discord_id) {
       return NextResponse.json({ error: "Invalid discord_id" }, { status: 400 });
     }
-    if (!isValidDateStr(week_date) || !isMonday(week_date)) {
-      return NextResponse.json({ error: "week_date must be a Monday (YYYY-MM-DD)" }, { status: 400 });
+    if (typeof week_date !== "string" || !isValidDateStr(week_date)) {
+      return NextResponse.json({ error: "Invalid week_date" }, { status: 400 });
     }
+    const week = resolveWeek(await loadEventWeeks(event_id), week_date);
+    if (!week) return NextResponse.json({ error: "That week isn't part of this event" }, { status: 400 });
 
+    // Days outside the week always stay 0.
     const payload: Record<string, string | number> = { event_id, discord_id, week_date };
     for (const day of DAY_COLUMNS) {
       const value = body[day];
-      payload[day] = isValidDayValue(value) ? Math.trunc(value) : 0;
+      payload[day] = weekHasDay(week, day) && isValidDayValue(value) ? Math.trunc(value) : 0;
     }
 
     const supabase = getSupabaseAdmin();

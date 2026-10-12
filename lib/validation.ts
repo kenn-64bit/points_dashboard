@@ -44,6 +44,11 @@ export function isValidDateStr(value: string): boolean {
   return !Number.isNaN(new Date(`${value}T00:00:00Z`).getTime());
 }
 
+// isValidDateStr alone lets 2026-02-30 roll over into March.
+export function isCalendarDate(value: string): boolean {
+  return isValidDateStr(value) && new Date(`${value}T00:00:00Z`).toISOString().startsWith(value);
+}
+
 export interface EventInput {
   event_name: string;
   event_type: EventType;

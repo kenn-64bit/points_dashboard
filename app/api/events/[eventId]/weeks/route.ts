@@ -4,14 +4,24 @@ import { errorResponse, unauthorizedResponse } from "@/lib/apiError";
 import { getCurrentUser, requireApiUser } from "@/lib/auth/dal";
 import { canEdit } from "@/lib/auth/roles";
 import { loadEventWeeks } from "@/lib/eventData";
-import { isValidUUID, isValidDateStr } from "@/lib/validation";
-import { isMonday } from "@/lib/week";
+import { isCalendarDate, isValidUUID, isValidDateStr } from "@/lib/validation";
+import { daysBetween, findOverlap, formatWeekRange, MAX_WEEK_DAYS, sortWeeks } from "@/lib/week";
 import { logAudit, weekLabel } from "@/lib/audit";
+import type { EventWeek } from "@/types";
 
 type Params = { params: Promise<{ eventId: string }> };
 
 // Two years of weekly events in one "Add Week" range is plenty.
 const MAX_WEEKS_PER_REQUEST = 104;
+
+// A week as sent by "Add Week": real calendar dates, 1–7 days long.
+function parseWeek(value: unknown): EventWeek | null {
+  const { week_date, end_date } = (value ?? {}) as Record<string, unknown>;
+  if (typeof week_date !== "string" || typeof end_date !== "string") return null;
+  if (!isCalendarDate(week_date) || !isCalendarDate(end_date)) return null;
+  const span = daysBetween(week_date, end_date);
+  return span >= 0 && span < MAX_WEEK_DAYS ? { week_date, end_date } : null;
+}
 
 // The event's weeks (with points or added via "Add Week"), oldest first.
 export async function GET(_request: NextRequest, { params }: Params) {
@@ -26,8 +36,9 @@ export async function GET(_request: NextRequest, { params }: Params) {
   }
 }
 
-// Saves weeks added through "Add Week", so they survive a reload before they
-// have any points. Weeks already saved are left as they are.
+// Saves weeks added through "Add Week" with the dates that were picked, so
+// they survive a reload before they have any points. A day can only belong to
+// one week of an event, so a week that overlaps another is refused.
 export async function POST(request: NextRequest, { params }: Params) {
   try {
     const user = await requireApiUser(canEdit);
@@ -38,34 +49,48 @@ export async function POST(request: NextRequest, { params }: Params) {
     const body = await request.json();
     const weeks: unknown = body?.weeks;
     if (!Array.isArray(weeks) || weeks.length === 0 || weeks.length > MAX_WEEKS_PER_REQUEST) {
+      return NextResponse.json({ error: `weeks must be a list of 1–${MAX_WEEKS_PER_REQUEST} weeks` }, { status: 400 });
+    }
+    const parsed = weeks.map(parseWeek);
+    if (parsed.some((week) => week === null)) {
       return NextResponse.json(
-        { error: `weeks must be a list of 1–${MAX_WEEKS_PER_REQUEST} Mondays` },
+        { error: `Every week needs a week_date and end_date (YYYY-MM-DD), 1–${MAX_WEEK_DAYS} days long` },
         { status: 400 }
       );
     }
-    if (!weeks.every((w) => typeof w === "string" && isValidDateStr(w) && isMonday(w))) {
-      return NextResponse.json({ error: "Every week must be a Monday (YYYY-MM-DD)" }, { status: 400 });
+    const added = sortWeeks(parsed as EventWeek[]);
+    if (added.some((week, i) => i > 0 && week.week_date <= added[i - 1].end_date)) {
+      return NextResponse.json({ error: "Weeks can't overlap each other" }, { status: 400 });
     }
 
-    const rows = [...new Set(weeks as string[])].map((week_date) => ({ event_id: eventId, week_date }));
-    const supabase = getSupabaseAdmin();
     const before = await loadEventWeeks(eventId);
-    const { error } = await supabase
-      .from("event_weeks")
-      .upsert(rows, { onConflict: "event_id,week_date", ignoreDuplicates: true });
+    for (const week of added) {
+      const clash = findOverlap(before, week.week_date, week.end_date);
+      if (clash) {
+        return NextResponse.json(
+          { error: `${formatWeekRange(week)} overlaps ${weekLabel(before, clash.week_date)}` },
+          { status: 409 }
+        );
+      }
+    }
+
+    const supabase = getSupabaseAdmin();
+    const { error } = await supabase.from("event_weeks").insert(added.map((week) => ({ event_id: eventId, ...week })));
     if (error) return errorResponse(error);
 
     const after = await loadEventWeeks(eventId);
-    // Only the weeks that weren't in the event's list already.
-    const added = after.filter((week) => !before.includes(week));
-    if (added.length > 0) {
-      await logAudit(user, {
-        action: "week.add",
-        event_id: eventId,
-        target: added[0],
-        details: { weeks: added.map((date) => ({ date, label: weekLabel(after, date) })) },
-      });
-    }
+    await logAudit(user, {
+      action: "week.add",
+      event_id: eventId,
+      target: added[0].week_date,
+      details: {
+        weeks: added.map((week) => ({
+          date: week.week_date,
+          end: week.end_date,
+          label: weekLabel(after, week.week_date),
+        })),
+      },
+    });
     return NextResponse.json({ weeks: after }, { status: 201 });
   } catch (err) {
     return errorResponse(err);
@@ -106,6 +131,7 @@ export async function DELETE(request: NextRequest, { params }: Params) {
         details: {
           weeks: removed.map((date) => ({
             date,
+            end: before.find((week) => week.week_date === date)?.end_date,
             label: weekLabel(before, date),
             scores: deletedPoints.filter((week) => week === date).length,
           })),

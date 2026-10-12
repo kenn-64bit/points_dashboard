@@ -27,9 +27,10 @@ function csvResponse(csv: string, filename: string) {
   });
 }
 
-// ?week=YYYY-MM-DD exports one week, ?week=all every week (oldest first), and
-// no week the latest one. Weeks added without scores export as header-only
-// sections, so every week in the event's list can be exported.
+// ?week=YYYY-MM-DD exports one of the event's weeks (by its first day),
+// ?week=all every week (oldest first), and no week the latest one. Weeks
+// added without scores export as header-only sections, so every week in the
+// event's list can be exported.
 export async function GET(request: NextRequest, { params }: Params) {
   try {
     const user = await getCurrentUser();
@@ -45,9 +46,12 @@ export async function GET(request: NextRequest, { params }: Params) {
     const [eventName, eventWeeks] = await Promise.all([loadEventName(eventId), loadEventWeeks(eventId)]);
     if (eventName === null) return NextResponse.json({ error: "Event not found" }, { status: 404 });
 
-    const weeks = week === "all" ? eventWeeks : [week ?? eventWeeks.at(-1)].filter((w): w is string => !!w);
+    const weeks = week === "all" ? eventWeeks : week ? eventWeeks.filter((w) => w.week_date === week) : eventWeeks.slice(-1);
     if (weeks.length === 0) {
-      return NextResponse.json({ error: "This event has no weeks yet" }, { status: 404 });
+      return NextResponse.json(
+        { error: week && week !== "all" ? "That week isn't part of this event" : "This event has no weeks yet" },
+        { status: 404 }
+      );
     }
 
     const supabase = getSupabaseAdmin();
@@ -55,19 +59,20 @@ export async function GET(request: NextRequest, { params }: Params) {
       .from("points")
       .select("*, users(discord_username)")
       .eq("event_id", eventId)
-      .in("week_date", weeks);
+      .in("week_date", weeks.map((w) => w.week_date));
     if (error) return errorResponse(error);
 
     const rows = mapRows(data ?? []);
     const sections = weeks.map((w) => ({
       week: w,
       rows: rows
-        .filter((row) => row.week_date === w)
+        .filter((row) => row.week_date === w.week_date)
         .sort((a, b) => a.discord_username.localeCompare(b.discord_username)),
     }));
 
+    const first = weeks[0].week_date;
     const slug = csvFileSlug(eventName);
-    const filename = week === "all" ? `${slug}-all-weeks.csv` : `${slug}-week-${weeks[0]}.csv`;
+    const filename = week === "all" ? `${slug}-all-weeks.csv` : `${slug}-week-${first}.csv`;
     const csv = buildEventExportCsv(eventName, sections);
 
     // The default ("latest week") is logged as the week it resolved to.
@@ -75,8 +80,8 @@ export async function GET(request: NextRequest, { params }: Params) {
       action: "export.week",
       event_id: eventId,
       event_name: eventName,
-      target: week === "all" ? "all" : weeks[0],
-      details: week === "all" ? {} : { week_date: weeks[0], week_label: weekLabel(eventWeeks, weeks[0]) },
+      target: week === "all" ? "all" : first,
+      details: week === "all" ? {} : { week_date: first, week_label: weekLabel(eventWeeks, first) },
     });
     return csvResponse(csv, filename);
   } catch (err) {

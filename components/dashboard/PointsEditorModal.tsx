@@ -3,9 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { DAY_COLUMNS, DAY_LABELS } from "@/types";
-import type { DayValues, PointsTableRow } from "@/types";
+import type { Day, DayValues, EventWeek, PointsTableRow } from "@/types";
 import { useToast } from "@/components/common/Toast";
-import { formatWeekRange } from "@/lib/week";
+import { formatWeekRange, weekDays } from "@/lib/week";
 import { Modal } from "@/components/common/Modal";
 import { Button } from "@/components/common/Button";
 import { TotalTile } from "@/components/common/TotalTile";
@@ -13,26 +13,30 @@ import { KeyValueRow } from "@/components/common/KeyValueRow";
 
 type Phase = "edit" | "confirm";
 
+// Only `week`'s own days can be edited; the others are saved as 0.
 export function PointsEditorModal({
   row,
+  week,
   onClose,
   onSaved,
 }: {
   row: PointsTableRow;
+  week: EventWeek;
   onClose: () => void;
   onSaved: (updated: PointsTableRow) => void;
 }) {
   const router = useRouter();
   const { showToast } = useToast();
   const [phase, setPhase] = useState<Phase>("edit");
-  const [values, setValues] = useState<DayValues>(() =>
-    Object.fromEntries(DAY_COLUMNS.map((day) => [day, row[day]])) as DayValues
+  const days = weekDays(week).map(({ day }) => day);
+  const [values, setValues] = useState<DayValues>(
+    () => Object.fromEntries(DAY_COLUMNS.map((day) => [day, days.includes(day) ? row[day] : 0])) as DayValues
   );
   const [saving, setSaving] = useState(false);
 
-  const total = DAY_COLUMNS.reduce((sum, day) => sum + (values[day] || 0), 0);
+  const total = days.reduce((sum, day) => sum + (values[day] || 0), 0);
 
-  function adjust(day: (typeof DAY_COLUMNS)[number], delta: number) {
+  function adjust(day: Day, delta: number) {
     setValues((prev) => ({ ...prev, [day]: Math.max(0, (prev[day] || 0) + delta) }));
   }
 
@@ -54,10 +58,10 @@ export function PointsEditorModal({
 
       onSaved({ ...row, ...body.point, discord_username: row.discord_username });
       showToast("Points saved");
-      // A first-ever save for this week means the week now exists server-side —
-      // refresh so the CSV export dropdown (fed by a server-rendered `weeks`
-      // prop) picks it up instead of staying stale until a manual reload.
-      if (isNew) router.refresh();
+      // Drops the copies Next.js keeps of pages rendered before this save, so
+      // the leaderboard, the export list and the back button all show the new
+      // points instead of the old ones until a manual reload.
+      router.refresh();
       onClose();
     } catch (err) {
       showToast((err as Error).message, "error");
@@ -72,7 +76,7 @@ export function PointsEditorModal({
       <div className="mb-5 flex items-start justify-between gap-4">
         <div className="min-w-0">
           <h3 className="truncate text-lg font-extrabold text-foreground">{row.discord_username}</h3>
-          <p className="text-sm text-muted-foreground">{formatWeekRange(row.week_date)}</p>
+          <p className="text-sm text-muted-foreground">{formatWeekRange(week)}</p>
         </div>
         <TotalTile value={total} />
       </div>
@@ -80,7 +84,7 @@ export function PointsEditorModal({
       {phase === "edit" && (
         <>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {DAY_COLUMNS.map((day) => (
+            {days.map((day) => (
               <div key={day} className="flex flex-col items-center gap-1.5 text-xs font-bold text-muted-foreground">
                 {DAY_LABELS[day]}
                 <div className="flex h-16 w-24 overflow-hidden rounded-field border border-border">
@@ -138,10 +142,10 @@ export function PointsEditorModal({
         <>
           <p className="text-sm text-muted-foreground">
             Save these points for <span className="font-bold text-foreground">{row.discord_username}</span>,{" "}
-            {formatWeekRange(row.week_date)}?
+            {formatWeekRange(week)}?
           </p>
           <div className="mt-3 rounded-field bg-surface-muted px-4 py-2">
-            {DAY_COLUMNS.map((day) => (
+            {days.map((day) => (
               <KeyValueRow key={day} label={DAY_LABELS[day]} value={values[day]} />
             ))}
             <div className="mt-1 border-t border-line pt-1">

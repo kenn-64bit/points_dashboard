@@ -2,9 +2,9 @@ import "server-only";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { loadEventName, loadEventWeeks } from "@/lib/eventData";
 import { ROLE_LABELS } from "@/lib/auth/roles";
-import { formatWeekLabel, formatWeekRange, formatWeeksSpan } from "@/lib/week";
+import { addDays, formatDateSpan, formatWeekLabel, mondayWeek } from "@/lib/week";
 import { DAY_COLUMNS, DAY_LABELS, EVENT_TYPE_LABELS } from "@/types";
-import type { AppUserRole, AuditAction, AuditRow, Day, DayValues, EventType, SessionUser } from "@/types";
+import type { AppUserRole, AuditAction, AuditRow, Day, DayValues, EventType, EventWeek, SessionUser } from "@/types";
 
 // The admin audit log (see AUDIT_LOG.md): API routes record what they changed
 // with logAudit(), and /dashboard/audit reads it back with loadAuditLog().
@@ -16,8 +16,8 @@ export interface AuditEntry {
   target?: string | null;
   // A player's discord_id: their username becomes the target.
   player?: string;
-  // A week of the event: stored as details.week_date and week_label
-  // ("Week 2 · Sep 21 - 27, 2026"), from the event's weeks at this moment.
+  // A week of the event, by its first day: stored as details.week_date and
+  // week_label ("Week 2 · Sep 21 - 25, 2026"), from the event's weeks at this moment.
   week?: string;
   details?: Record<string, unknown>; // never a password or hash
 }
@@ -64,10 +64,11 @@ async function loadPlayerName(discordId: string): Promise<string | null> {
   return (data?.discord_username as string | undefined) ?? null;
 }
 
-// "Week 2 · Sep 21 - 27, 2026", by the week's position in `weeks`; just the
-// range when it isn't one of them.
-export function weekLabel(weeks: string[], monday: string): string {
-  return formatWeekLabel(weeks.indexOf(monday) + 1, monday);
+// "Week 2 · Sep 21 - 25, 2026", by the week's position in `weeks`; just the
+// Monday–Sunday range when it isn't one of them.
+export function weekLabel(weeks: EventWeek[], weekDate: string): string {
+  const index = weeks.findIndex((week) => week.week_date === weekDate);
+  return formatWeekLabel(index + 1, weeks[index] ?? mondayWeek(weekDate));
 }
 
 // Only the days that changed, e.g. { monday: [3, 5] }.
@@ -179,14 +180,19 @@ function listNames(value: unknown, max = 5): string {
 
 function weekOf(details: Details): string | null {
   const date = str(details.week_date);
-  return str(details.week_label) ?? (date ? formatWeekRange(date) : null);
+  return str(details.week_label) ?? (date ? formatDateSpan(date, addDays(date, 6)) : null);
 }
 
-function weeksOf(details: Details): { date: string; label: string; scores: number }[] {
+// Entries from before picked ranges have no `end`: those weeks ran Monday–Sunday.
+function weeksOf(details: Details): { date: string; end: string; label: string; scores: number }[] {
   if (!Array.isArray(details.weeks)) return [];
   return details.weeks
     .filter((w): w is Details => !!w && typeof w === "object" && typeof (w as Details).date === "string")
-    .map((w) => ({ date: w.date as string, label: str(w.label) ?? formatWeekRange(w.date as string), scores: num(w.scores) }));
+    .map((w) => {
+      const date = w.date as string;
+      const end = str(w.end) ?? addDays(date, 6);
+      return { date, end, label: str(w.label) ?? formatDateSpan(date, end), scores: num(w.scores) };
+    });
 }
 
 function describeEventChanges(value: unknown): string {
@@ -210,9 +216,9 @@ function sentence(row: AuditRow): string {
   const event = row.event_name ?? "an event";
   const target = row.target ?? "someone";
   const week = weekOf(d);
-  // "in Game Night (Week 2 · Sep 21 - 27, 2026)"
+  // "in Game Night (Week 2 · Sep 21 - 25, 2026)"
   const inEvent = week ? `in ${event} (${week})` : `in ${event}`;
-  // "Game Night, Week 2 · Sep 21 - 27, 2026"
+  // "Game Night, Week 2 · Sep 21 - 25, 2026"
   const eventWeek = week ? `${event}, ${week}` : event;
 
   switch (row.action) {
@@ -225,7 +231,7 @@ function sentence(row: AuditRow): string {
     case "week.add": {
       const weeks = weeksOf(d);
       if (weeks.length === 1) return `added ${weeks[0].label} to ${event}`;
-      const span = weeks.length ? ` (${formatWeeksSpan(weeks[0].date, weeks.at(-1)!.date)})` : "";
+      const span = weeks.length ? ` (${formatDateSpan(weeks[0].date, weeks.at(-1)!.end)})` : "";
       return `added ${plural(weeks.length, "week")} to ${event}${span}`;
     }
     case "week.remove": {

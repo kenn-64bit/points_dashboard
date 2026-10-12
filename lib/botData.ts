@@ -2,15 +2,20 @@ import "server-only";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { computeLeaderboard } from "@/lib/points";
 import { loadEventWeeks } from "@/lib/eventData";
-import { isValidDateStr, isValidUUID } from "@/lib/validation";
+import { isCalendarDate, isValidUUID } from "@/lib/validation";
 import {
+  addDays,
+  dateOfDay,
   dayColumnOf,
   formatDate,
+  formatDateSpan,
   formatDayLabel,
   formatWeekLabel,
   formatWeekRange,
-  formatWeeksSpan,
-  normalizeToMonday,
+  MAX_WEEK_DAYS,
+  mondayWeekOf,
+  weekContaining,
+  weekDays,
 } from "@/lib/week";
 import { BOT_TIMEFRAMES, DAY_COLUMNS, DAY_LABELS, EVENT_TYPES, EVENT_TYPE_LABELS } from "@/types";
 import type {
@@ -24,6 +29,7 @@ import type {
   Day,
   DayValues,
   EventType,
+  EventWeek,
   LeaderboardRow,
 } from "@/types";
 
@@ -67,11 +73,6 @@ export interface StandingsQuery {
 
 function isBotTimeframe(value: string): value is BotTimeframe {
   return (BOT_TIMEFRAMES as readonly string[]).includes(value);
-}
-
-// isValidDateStr alone lets 2026-02-30 roll over into March.
-function isCalendarDate(value: string): boolean {
-  return isValidDateStr(value) && formatDate(new Date(`${value}T00:00:00Z`)) === value;
 }
 
 // ?event_id=<uuid>|all (left out: the latest event), ?timeframe=event|week|day
@@ -185,8 +186,13 @@ type ScopeRow = DayValues & {
 const POINTS_COLUMNS =
   "event_id, discord_id, week_date, total_points, monday, tuesday, wednesday, thursday, friday, saturday, sunday, users(discord_username)";
 
+function toScopeRow(row: Record<string, unknown>): ScopeRow {
+  const { users, ...rest } = row as { users: { discord_username: string } | null } & Record<string, unknown>;
+  return { ...rest, discord_username: users?.discord_username ?? "unknown" } as ScopeRow;
+}
+
 // The points rows in scope, with each player's name: one event or all of
-// them, and for the week and day timeframes only that week's rows.
+// them, and only one week's rows when `week` (its first day) is given.
 async function loadScopeRows(eventId: string | null, week: string | null): Promise<ScopeRow[]> {
   const rows = await selectAllRows<Record<string, unknown>>(() => {
     let query = getSupabaseAdmin().from("points").select(POINTS_COLUMNS);
@@ -194,9 +200,30 @@ async function loadScopeRows(eventId: string | null, week: string | null): Promi
     if (week) query = query.eq("week_date", week);
     return query.order("point_id");
   });
-  return rows.map((row) => {
-    const { users, ...rest } = row as { users: { discord_username: string } | null } & Record<string, unknown>;
-    return { ...rest, discord_username: users?.discord_username ?? "unknown" } as ScopeRow;
+  return rows.map(toScopeRow);
+}
+
+// Every event's rows for the week `date` is in. Events' weeks start on
+// different days, so these are the rows whose week starts at most 6 days
+// before `date` and hasn't ended by then (end_date from event_weeks; a week
+// with only points runs Monday–Sunday, so 6 days on).
+async function loadRowsOn(date: string): Promise<ScopeRow[]> {
+  const supabase = getSupabaseAdmin();
+  const from = addDays(date, -(MAX_WEEK_DAYS - 1));
+  const [rows, planned] = await Promise.all([
+    selectAllRows<Record<string, unknown>>(() =>
+      supabase.from("points").select(POINTS_COLUMNS).gte("week_date", from).lte("week_date", date).order("point_id")
+    ),
+    supabase.from("event_weeks").select("event_id, week_date, end_date").gte("week_date", from).lte("week_date", date),
+  ]);
+  if (planned.error) console.error("[event_weeks]", planned.error);
+
+  const ends = new Map(
+    (planned.error ? [] : (planned.data ?? [])).map((row) => [`${row.event_id}:${row.week_date}`, row.end_date as string])
+  );
+  return rows.map(toScopeRow).filter((row) => {
+    const end = ends.get(`${row.event_id}:${row.week_date}`) ?? addDays(row.week_date, MAX_WEEK_DAYS - 1);
+    return date <= end;
   });
 }
 
@@ -204,23 +231,29 @@ interface Standings {
   event: BotEvent | null;
   period: BotPeriod;
   rows: ScopeRow[];
-  eventWeeks: string[] | null; // the event's weeks, oldest first; null for all events
+  eventWeeks: EventWeek[] | null; // the event's weeks, oldest first; null for all events
+  week: EventWeek | null; // one event's week, for the week and day timeframes
   day: Day | null; // the column that counts, for the day timeframe
 }
 
-// "Week 2 · Sep 21 - 27, 2026" and the like, numbered as on the dashboard.
-function describePeriod(query: StandingsQuery, week: string | null, eventWeeks: string[] | null): BotPeriod {
+// "Week 2 · Sep 21 - 25, 2026" and the like, numbered as on the dashboard.
+function describePeriod(query: StandingsQuery, week: EventWeek | null, eventWeeks: EventWeek[] | null): BotPeriod {
   const { timeframe, date } = query;
   if (timeframe === "day" && date) {
-    return { timeframe, week_date: week, date, label: formatDayLabel(date) };
+    return { timeframe, week_date: week?.week_date ?? null, date, label: formatDayLabel(date) };
   }
-  if (timeframe === "week" && week) {
-    const weekNumber = eventWeeks ? eventWeeks.indexOf(week) + 1 : 0;
+  if (timeframe === "week" && date) {
+    // All events: each event's own week that `date` is in.
+    if (!week) return { timeframe, week_date: null, date, label: `Week of ${formatDayLabel(date)}` };
+    const weekNumber = (eventWeeks ?? []).findIndex((w) => w.week_date === week.week_date) + 1;
     const label = weekNumber >= 1 ? formatWeekLabel(weekNumber, week) : `Week of ${formatWeekRange(week)}`;
-    return { timeframe, week_date: week, date: null, label };
+    return { timeframe, week_date: week.week_date, date: null, label };
   }
   if (!eventWeeks) return { timeframe, week_date: null, date: null, label: "All events · all time" };
-  const label = eventWeeks.length > 0 ? `All weeks · ${formatWeeksSpan(eventWeeks[0], eventWeeks.at(-1)!)}` : "All weeks";
+  const label =
+    eventWeeks.length > 0
+      ? `All weeks · ${formatDateSpan(eventWeeks[0].week_date, eventWeeks.at(-1)!.end_date)}`
+      : "All weeks";
   return { timeframe, week_date: null, date: null, label };
 }
 
@@ -229,16 +262,19 @@ async function loadStandings(query: StandingsQuery): Promise<Standings | { notFo
   if ("notFound" in scope) return scope;
 
   const { event } = scope;
-  const week = query.date ? normalizeToMonday(query.date) : null;
-  const [rows, eventWeeks] = await Promise.all([
-    loadScopeRows(event?.event_id ?? null, week),
-    event ? loadEventWeeks(event.event_id) : null,
-  ]);
+  const { date } = query;
+  const eventWeeks = event ? await loadEventWeeks(event.event_id) : null;
+  // One event: its week that `date` is in, or that date's Monday–Sunday when
+  // none of its weeks has it (which finds nothing unless it has old weeks).
+  const week = date && eventWeeks ? (weekContaining(eventWeeks, date) ?? mondayWeekOf(date)) : null;
+  const rows =
+    date && !event ? await loadRowsOn(date) : await loadScopeRows(event?.event_id ?? null, week?.week_date ?? null);
   return {
     event,
     rows,
     eventWeeks,
-    day: query.timeframe === "day" && query.date ? dayColumnOf(query.date) : null,
+    week,
+    day: query.timeframe === "day" && date ? dayColumnOf(date) : null,
     period: describePeriod(query, week, eventWeeks),
   };
 }
@@ -312,12 +348,13 @@ function sumOf(rows: ScopeRow[], points: (row: ScopeRow) => number): number {
   return rows.reduce((sum, row) => sum + points(row), 0);
 }
 
-// Distinct calendar days with points: a day scored in two events counts once.
+// Distinct calendar days with points: a day scored in two events counts once,
+// even when the two events' weeks start on different days.
 function countActiveDays(rows: ScopeRow[], day: Day | null): number {
   const days = new Set<string>();
   for (const row of rows) {
     for (const column of day ? [day] : DAY_COLUMNS) {
-      if (row[column] > 0) days.add(`${row.week_date}:${column}`);
+      if (row[column] > 0) days.add(dateOfDay(row.week_date, column));
     }
   }
   return days.size;
@@ -326,20 +363,22 @@ function countActiveDays(rows: ScopeRow[], day: Day | null): number {
 // Where a player's points came from: each day of the week, each week of the
 // event, or each event. Nothing to break down for a single day.
 async function loadBreakdown(
-  { eventWeeks }: Standings,
+  { eventWeeks, week }: Standings,
   timeframe: BotTimeframe,
   own: ScopeRow[]
 ): Promise<BotBreakdownItem[]> {
   if (timeframe === "day") return [];
   if (timeframe === "week") {
-    return DAY_COLUMNS.map((day) => ({ label: DAY_LABELS[day], points: sumOf(own, (row) => row[day]) }));
+    // One event: its week's own days, in order. All events: Monday–Sunday.
+    const days = week ? weekDays(week).map(({ day }) => day) : DAY_COLUMNS;
+    return days.map((day) => ({ label: DAY_LABELS[day], points: sumOf(own, (row) => row[day]) }));
   }
   if (eventWeeks) {
-    // Every week of the event, oldest first, including weeks the player sat out.
-    const weeks = [...new Set([...eventWeeks, ...own.map((row) => row.week_date)])].sort();
-    return weeks.map((week) => ({
-      label: formatWeekLabel(eventWeeks.indexOf(week) + 1, week),
-      points: sumOf(own.filter((row) => row.week_date === week), (row) => row.total_points),
+    // Every week of the event (which includes every week with points), oldest
+    // first, including weeks the player sat out.
+    return eventWeeks.map((w, i) => ({
+      label: formatWeekLabel(i + 1, w),
+      points: sumOf(own.filter((row) => row.week_date === w.week_date), (row) => row.total_points),
     }));
   }
   // All events: each event the player has points rows in, best first.

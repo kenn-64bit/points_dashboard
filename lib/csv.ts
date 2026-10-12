@@ -1,7 +1,6 @@
 import Papa from "papaparse";
-import { DAY_COLUMNS } from "@/types";
-import type { LeaderboardRow, PointsRowWithUser } from "@/types";
-import { formatWeekRange } from "@/lib/week";
+import type { EventWeek, LeaderboardRow, PointsRowWithUser } from "@/types";
+import { formatWeekRange, weekDays } from "@/lib/week";
 import { ordinal } from "@/lib/points";
 
 // Discord usernames come from bulk-import, so they're fully attacker-controlled
@@ -19,30 +18,31 @@ function titleLine(text: string): string {
   return Papa.unparse([[sanitizeCsvCell(text)]]);
 }
 
-const DAY_HEADERS = DAY_COLUMNS.map((day) => day[0].toUpperCase() + day.slice(1));
-const POINTS_FIELDS = ["Discord Username", ...DAY_HEADERS, "Total Points", "Days Participated"];
-
-// One week's table. Days Participated = that week's day columns > 0 (0–7).
-// Distinct from the leaderboard's "weeks participated" metric, which counts
-// non-zero weeks. Fields are explicit so an empty week still gets a header row.
-function buildPointsTableCsv(rows: PointsRowWithUser[]): string {
+// One week's table, with a column for each of the week's own days in order
+// (headed "Thursday" etc., so the file can be imported again). Days
+// Participated = those days > 0 (0–7). Distinct from the leaderboard's "weeks
+// participated" metric, which counts non-zero weeks. Fields are explicit so an
+// empty week still gets a header row.
+function buildPointsTableCsv(week: EventWeek, rows: PointsRowWithUser[]): string {
+  const days = weekDays(week).map(({ day }) => day);
+  const fields = ["Discord Username", ...days.map((day) => day[0].toUpperCase() + day.slice(1)), "Total Points", "Days Participated"];
   const data = rows.map((row) => [
     sanitizeCsvCell(row.discord_username),
-    ...DAY_COLUMNS.map((day) => row[day]),
+    ...days.map((day) => row[day]),
     row.total_points,
-    DAY_COLUMNS.filter((day) => row[day] > 0).length,
+    days.filter((day) => row[day] > 0).length,
   ]);
-  return Papa.unparse({ fields: POINTS_FIELDS, data });
+  return Papa.unparse({ fields, data });
 }
 
 // Event name in the top cell, then a "Week of ..." heading + table per week,
 // sections separated by a blank line. Callers must pass sections pre-sorted.
 export function buildEventExportCsv(
   eventName: string,
-  weekSections: { week: string; rows: PointsRowWithUser[] }[]
+  weekSections: { week: EventWeek; rows: PointsRowWithUser[] }[]
 ): string {
   const sections = weekSections.map(
-    ({ week, rows }) => `${titleLine(`Week of ${formatWeekRange(week)}`)}\n${buildPointsTableCsv(rows)}`
+    ({ week, rows }) => `${titleLine(`Week of ${formatWeekRange(week)}`)}\n${buildPointsTableCsv(week, rows)}`
   );
   return [titleLine(eventName), ...sections].join("\n\n");
 }

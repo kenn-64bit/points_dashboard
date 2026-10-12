@@ -1,14 +1,25 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { formatDate, formatWeekRange, getCurrentWeekMonday, getWeeksBetween, normalizeToMonday } from "@/lib/week";
+import {
+  daysBetween,
+  defaultWeek,
+  findOverlap,
+  formatDate,
+  formatDateSpan,
+  formatWeekRange,
+  getToday,
+  splitIntoWeeks,
+  weekDays,
+} from "@/lib/week";
 import { useToast } from "@/components/common/Toast";
 import { Button } from "@/components/common/Button";
 import { useCanEdit } from "@/components/auth/RoleProvider";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { TrashIcon } from "@/components/common/icons";
 import { MenuItem, MenuList, MenuPanel, SelectTrigger } from "@/components/common/Select";
+import type { EventWeek } from "@/types";
 
 const WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -32,10 +43,16 @@ function formatShortDate(date: string): string {
   return new Date(`${date}T00:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 }
 
+function plural(count: number, noun: string): string {
+  return `${count} ${noun}${count === 1 ? "" : "s"}`;
+}
+
 type PickStep = "start" | "end";
 
 // Weeks are owned by the caller (oldest first, so Week 1 is on top) so the
 // page can count and number them; this component picks, adds and removes them.
+// Weeks are identified by their first day; `selectedWeek` is null while the
+// event has none.
 export function WeekSelector({
   eventId,
   weeks,
@@ -45,18 +62,18 @@ export function WeekSelector({
   onChange,
 }: {
   eventId: string;
-  weeks: string[];
-  onWeeksChange: (weeks: string[]) => void;
+  weeks: EventWeek[];
+  onWeeksChange: (weeks: EventWeek[]) => void;
   weekNumber: (week: string) => number;
-  selectedWeek: string;
-  onChange: (week: string) => void;
+  selectedWeek: string | null;
+  onChange: (week: string | null) => void;
 }) {
   const editable = useCanEdit();
   const router = useRouter();
   const { showToast } = useToast();
   const [open, setOpen] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
-  const [viewDate, setViewDate] = useState(() => new Date(`${selectedWeek}T00:00:00Z`));
+  const [viewDate, setViewDate] = useState(() => new Date(`${selectedWeek ?? getToday()}T00:00:00Z`));
   const [pickStart, setPickStart] = useState<string | null>(null);
   const [pickEnd, setPickEnd] = useState<string | null>(null);
   // Which date the next day click sets; null once both are picked.
@@ -68,6 +85,12 @@ export function WeekSelector({
   const [weeksPendingRemoval, setWeeksPendingRemoval] = useState<string[] | null>(null);
   const [removing, setRemoving] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  // Each day of a week, with its week: those days can't be picked again.
+  const takenBy = useMemo(() => {
+    const map = new Map<string, EventWeek>();
+    for (const week of weeks) for (const { date } of weekDays(week)) map.set(date, week);
+    return map;
+  }, [weeks]);
 
   useEffect(() => {
     if (!open && !calendarOpen) return;
@@ -102,8 +125,8 @@ export function WeekSelector({
   }
 
   function openCalendar() {
-    const todayStr = formatDate(new Date());
-    setViewDate(new Date(`${selectedWeek < todayStr ? todayStr : selectedWeek}T00:00:00Z`));
+    const todayStr = getToday();
+    setViewDate(new Date(`${selectedWeek && selectedWeek > todayStr ? selectedWeek : todayStr}T00:00:00Z`));
     setCalendarOpen((o) => !o);
     closeWeekMenu();
     cancelPicking();
@@ -123,10 +146,11 @@ export function WeekSelector({
   // Exact dates: a day click sets whichever of Start/End is active (clicking
   // a card makes it active), then moves on to the one still missing. If the
   // end lands before the start they swap. Once both are set, the next click
-  // starts a new range. Nothing is added until the range is confirmed.
+  // starts a new range. Nothing is added until the range is confirmed. Any
+  // day can be picked, past ones too, except days already in a week.
   function handleDayClick(date: Date) {
     const clicked = formatDate(date);
-    if (clicked < formatDate(new Date())) return;
+    if (takenBy.has(clicked)) return;
     let start = pickStart;
     let end = pickEnd;
     if (activeStep === null) {
@@ -144,10 +168,11 @@ export function WeekSelector({
   }
 
   // Saved on the server first, so added weeks survive a reload even before
-  // they have any points.
+  // they have any points. The range becomes weeks of exactly the picked days:
+  // one week for up to 7 days, else 7-day blocks from the start.
   async function confirmRange() {
-    if (!pickStart || !pickEnd) return;
-    const weeksToAdd = getWeeksBetween(normalizeToMonday(pickStart), normalizeToMonday(pickEnd));
+    if (!pickStart || !pickEnd || pickedOverlap) return;
+    const weeksToAdd = splitIntoWeeks(pickStart, pickEnd);
     setAdding(true);
     try {
       const res = await fetch(`/api/events/${eventId}/weeks`, {
@@ -155,15 +180,16 @@ export function WeekSelector({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ weeks: weeksToAdd }),
       });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body.error ?? "Failed to add weeks");
-      }
-      onWeeksChange([...new Set([...weeks, ...weeksToAdd])].sort());
-      onChange(weeksToAdd[0]); // earliest week in the picked range
-      showToast(`Added ${formatShortDate(pickStart)} – ${formatShortDate(pickEnd)}`);
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error ?? "Failed to add weeks");
+      onWeeksChange(body.weeks);
+      onChange(weeksToAdd[0].week_date); // earliest week in the picked range
+      showToast(`Added ${formatDateSpan(pickStart, pickEnd)}`);
       cancelPicking();
       setCalendarOpen(false);
+      // Drops the copies Next.js keeps of pages rendered before this change,
+      // so going back to them (or the back button) shows the new weeks.
+      router.refresh();
     } catch (err) {
       showToast((err as Error).message, "error");
     } finally {
@@ -185,12 +211,13 @@ export function WeekSelector({
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error ?? `Failed to delete ${count === 1 ? "week" : "weeks"}`);
       }
-      const remaining = weeks.filter((w) => !removed.has(w));
-      const fallback = remaining.at(-1) ?? getCurrentWeekMonday();
-      onWeeksChange(remaining.length ? remaining : [fallback]);
-      if (removed.has(selectedWeek)) onChange(fallback);
+      // The other weeks keep their dates; only their numbers can shift.
+      const remaining = weeks.filter((w) => !removed.has(w.week_date));
+      onWeeksChange(remaining);
+      if (selectedWeek && removed.has(selectedWeek)) onChange(defaultWeek(remaining, getToday()));
       setCheckedWeeks((prev) => new Set([...prev].filter((w) => !removed.has(w))));
       showToast(count === 1 ? "Week deleted" : `${count} weeks deleted`);
+      // As after adding: no page, and no back button, shows the deleted weeks.
       router.refresh();
     } catch (err) {
       showToast((err as Error).message, "error");
@@ -201,9 +228,7 @@ export function WeekSelector({
   }
 
   const calendarDays = buildCalendarGrid(viewDate);
-  // Past dates can't be picked — ranges start today at the earliest.
-  const today = formatDate(new Date());
-  const viewingCurrentMonth = formatDate(viewDate).slice(0, 7) <= today.slice(0, 7);
+  const today = getToday();
   const monthName = viewDate.toLocaleDateString("en-US", { month: "long", timeZone: "UTC" });
 
   // Only the dates the user actually picks are highlighted: the start, the
@@ -214,32 +239,47 @@ export function WeekSelector({
   const picked = [previewStart, previewEnd].filter((d): d is string => !!d).sort();
   const rangeLo = picked[0] ?? null;
   const rangeHi = picked.at(-1) ?? null;
-  const pickedWeekCount =
-    pickStart && pickEnd ? getWeeksBetween(normalizeToMonday(pickStart), normalizeToMonday(pickEnd)).length : 0;
+  // The week the shown range runs into, if any; adding is blocked while the
+  // picked range does.
+  const overlap = rangeLo && rangeHi ? findOverlap(weeks, rangeLo, rangeHi) : undefined;
+  const pickedOverlap = pickStart && pickEnd ? findOverlap(weeks, pickStart, pickEnd) : undefined;
+  const pickedWeekCount = pickStart && pickEnd ? splitIntoWeeks(pickStart, pickEnd).length : 0;
+  const pickedDayCount = pickStart && pickEnd ? daysBetween(pickStart, pickEnd) + 1 : 0;
 
+  const selected = weeks.find((w) => w.week_date === selectedWeek);
+  const byStart = new Map(weeks.map((w) => [w.week_date, w]));
+  const rangeOf = (week: string) => {
+    const found = byStart.get(week);
+    return found ? formatWeekRange(found) : week;
+  };
   // Oldest first, like `weeks`; checks on weeks that are gone don't count.
-  const checkedList = weeks.filter((w) => checkedWeeks.has(w));
-  const allChecked = weeks.length > 0 && checkedList.length === weeks.length;
+  const starts = weeks.map((w) => w.week_date);
+  const checkedList = starts.filter((w) => checkedWeeks.has(w));
+  const allChecked = starts.length > 0 && checkedList.length === starts.length;
   const pendingCount = weeksPendingRemoval?.length ?? 0;
 
   return (
     <div ref={containerRef} className="flex flex-wrap items-center gap-3">
       <div className="relative">
-        <SelectTrigger
-          open={open}
-          onClick={() => {
-            if (open) closeWeekMenu();
-            else setOpen(true);
-            setCalendarOpen(false);
-          }}
-        >
-          {formatWeekRange(selectedWeek)}
-        </SelectTrigger>
-        {open && (
+        {selected ? (
+          <SelectTrigger
+            open={open}
+            onClick={() => {
+              if (open) closeWeekMenu();
+              else setOpen(true);
+              setCalendarOpen(false);
+            }}
+          >
+            {formatWeekRange(selected)}
+          </SelectTrigger>
+        ) : (
+          <span className="text-sm font-bold text-muted-foreground">No weeks yet</span>
+        )}
+        {open && selected && (
           <MenuPanel className={editable ? "w-80 max-w-[calc(100vw-2rem)]" : "w-72"}>
             <MenuList>
-              {weeks.map((week) => {
-                const label = `Week ${weekNumber(week)} (${formatWeekRange(week)})`;
+              {starts.map((week) => {
+                const label = `Week ${weekNumber(week)} (${rangeOf(week)})`;
                 return (
                   <MenuItem
                     key={week}
@@ -273,7 +313,7 @@ export function WeekSelector({
                     }
                   >
                     <span className="text-xs font-bold text-muted-foreground">Week {weekNumber(week)}</span>
-                    {formatWeekRange(week)}
+                    {rangeOf(week)}
                   </MenuItem>
                 );
               })}
@@ -287,7 +327,7 @@ export function WeekSelector({
                     ref={(el) => {
                       if (el) el.indeterminate = checkedList.length > 0 && !allChecked;
                     }}
-                    onChange={() => setCheckedWeeks(allChecked ? new Set() : new Set(weeks))}
+                    onChange={() => setCheckedWeeks(allChecked ? new Set() : new Set(starts))}
                     aria-label="Select all weeks"
                     className="h-4 w-4 cursor-pointer accent-primary-ink"
                   />
@@ -326,9 +366,8 @@ export function WeekSelector({
                   <button
                     type="button"
                     onClick={() => shiftMonth(-1)}
-                    disabled={viewingCurrentMonth}
                     aria-label="Previous month"
-                    className="flex h-7 w-7 items-center justify-center rounded-full bg-cal-cell text-base font-extrabold text-cal-title shadow-sm transition-colors hover:bg-surface disabled:cursor-not-allowed disabled:opacity-30"
+                    className="flex h-7 w-7 items-center justify-center rounded-full bg-cal-cell text-base font-extrabold text-cal-title shadow-sm transition-colors hover:bg-surface"
                   >
                     ‹
                   </button>
@@ -395,25 +434,27 @@ export function WeekSelector({
                     const inCurrentMonth = date.getUTCMonth() === viewDate.getUTCMonth();
                     const inRange = !!rangeLo && !!rangeHi && dateStr >= rangeLo && dateStr <= rangeHi;
                     const isEndpoint = dateStr === rangeLo || dateStr === rangeHi;
-                    const isPast = dateStr < today;
                     const isToday = dateStr === today;
+                    const taken = takenBy.get(dateStr);
 
                     const tile = isEndpoint
                       ? "bg-primary text-primary-foreground shadow-sm ring-2 ring-primary-ink"
-                      : inRange
-                        ? "bg-primary-soft text-cal-cell-ink ring-1 ring-primary-ink/40"
-                        : isPast
-                          ? "bg-cal-cell/60 text-muted-foreground"
-                          : `bg-cal-cell shadow-sm hover:ring-2 hover:ring-primary-ink ${inCurrentMonth ? "text-cal-cell-ink" : "text-muted-foreground"}`;
+                      : inRange && taken
+                        ? "bg-danger-soft text-danger-ink line-through ring-1 ring-danger-ink/40"
+                        : inRange
+                          ? "bg-primary-soft text-cal-cell-ink ring-1 ring-primary-ink/40"
+                          : taken
+                            ? "bg-cal-cell/60 text-muted-foreground line-through"
+                            : `bg-cal-cell shadow-sm hover:ring-2 hover:ring-primary-ink ${inCurrentMonth ? "text-cal-cell-ink" : "text-muted-foreground"}`;
 
                     return (
                       <button
                         key={dateStr}
                         type="button"
-                        disabled={isPast}
-                        title={isPast ? "Past dates can't be added" : undefined}
+                        disabled={!!taken}
+                        title={taken ? `Already in Week ${weekNumber(taken.week_date)} (${formatWeekRange(taken)})` : undefined}
                         aria-pressed={isEndpoint}
-                        onMouseEnter={() => !isPast && setHoverDate(dateStr)}
+                        onMouseEnter={() => !taken && setHoverDate(dateStr)}
                         onClick={() => handleDayClick(date)}
                         className={`relative flex h-9 flex-col items-center rounded-lg pt-1.5 text-sm font-extrabold tabular-nums transition-colors disabled:cursor-not-allowed ${tile}`}
                       >
@@ -427,9 +468,17 @@ export function WeekSelector({
                 </div>
 
                 <div className="mt-2.5 flex items-center justify-between gap-2 rounded-full bg-cal-cell/80 py-1 pl-3 pr-1">
-                  <span className="text-xs font-bold text-muted-foreground">
-                    {pickedWeekCount > 0 ? `${pickedWeekCount} ${pickedWeekCount === 1 ? "week" : "weeks"}` : "Pick a start and end"}
-                  </span>
+                  {overlap ? (
+                    <span className="text-xs font-bold text-danger-ink" title={`Overlaps ${formatWeekRange(overlap)}`}>
+                      Overlaps Week {weekNumber(overlap.week_date)}
+                    </span>
+                  ) : (
+                    <span className="text-xs font-bold text-muted-foreground">
+                      {pickedWeekCount > 0
+                        ? `${plural(pickedWeekCount, "week")} · ${plural(pickedDayCount, "day")}`
+                        : "Pick a start and end"}
+                    </span>
+                  )}
                   <div className="flex gap-2">
                     <Button type="button" variant="secondary" onClick={cancelPicking} disabled={!pickStart && !pickEnd} className="px-3 py-1.5 text-xs">
                       Clear
@@ -438,7 +487,7 @@ export function WeekSelector({
                       type="button"
                       variant="primary"
                       onClick={confirmRange}
-                      disabled={!pickStart || !pickEnd || adding}
+                      disabled={!pickStart || !pickEnd || !!pickedOverlap || adding}
                       className="px-3 py-1.5 text-xs"
                     >
                       {adding ? "Adding…" : "Add weeks"}
@@ -464,7 +513,7 @@ export function WeekSelector({
             <>
               All points for{" "}
               <span className="font-bold text-foreground">
-                Week {weekNumber(weeksPendingRemoval[0])} · {formatWeekRange(weeksPendingRemoval[0])}
+                Week {weekNumber(weeksPendingRemoval[0])} · {rangeOf(weeksPendingRemoval[0])}
               </span>{" "}
               will be permanently deleted. This can&apos;t be undone.
             </>
@@ -475,7 +524,7 @@ export function WeekSelector({
                 {weeksPendingRemoval.map((week) => (
                   <li key={week} className="flex items-baseline gap-2 px-3 py-1.5">
                     <span className="text-xs font-bold">Week {weekNumber(week)}</span>
-                    <span className="font-bold text-foreground">{formatWeekRange(week)}</span>
+                    <span className="font-bold text-foreground">{rangeOf(week)}</span>
                   </li>
                 ))}
               </ul>

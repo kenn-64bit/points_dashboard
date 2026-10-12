@@ -13,20 +13,14 @@ import { IconButton, IconLink } from "@/components/common/IconButton";
 import { PencilIcon, TrophyIcon } from "@/components/common/icons";
 import { Loading } from "@/components/common/Loading";
 import { ErrorState } from "@/components/common/ErrorState";
-import { formatWeekLabel, getCurrentWeekMonday } from "@/lib/week";
-import type { Event, PointsTableRow } from "@/types";
+import { Panel } from "@/components/common/Panel";
+import { defaultWeek, formatWeekLabel, getToday } from "@/lib/week";
+import type { Event, EventWeek, PointsTableRow } from "@/types";
 
 // Loaded on first open, so its code isn't part of the page's initial JS.
 const EditEventModal = dynamic(() => import("@/components/dashboard/EditEventModal").then((m) => m.EditEventModal), {
   ssr: false,
 });
-
-// `weeks` are the event's saved weeks (oldest first). The current week is
-// always offered too, even before it has been added or has any points.
-function withCurrentWeek(weeks: string[]): string[] {
-  const current = getCurrentWeekMonday();
-  return weeks.includes(current) ? weeks : [...weeks, current].sort();
-}
 
 // Long names keep their start and end, with "…" in the middle.
 const MAX_TITLE_CHARS = 48;
@@ -37,9 +31,11 @@ function middleTruncate(text: string): string {
   return `${text.slice(0, head).trimEnd()}…${text.slice(-tail).trimStart()}`;
 }
 
-// `initialRows` is `initialWeek`'s table, rendered on the server so it arrives
-// with the page. The server's "current week" is UTC-based, so if the viewer's
-// local week differs the workspace switches to it and fetches that instead.
+// `weeks` are the event's weeks, oldest first: only the ones it has, so a
+// deleted week stays gone and a new event starts with none. `initialRows` is
+// `initialWeek`'s table, rendered on the server so it arrives with the page.
+// The server's "today" is UTC-based, so if the viewer's local date picks
+// another week the workspace switches to it and fetches that instead.
 export function EventWorkspace({
   event: initialEvent,
   weeks: serverWeeks,
@@ -47,28 +43,43 @@ export function EventWorkspace({
   initialRows,
 }: {
   event: Event;
-  weeks: string[];
-  initialWeek: string;
+  weeks: EventWeek[];
+  initialWeek: string | null;
   initialRows: PointsTableRow[] | null;
 }) {
   const editable = useCanEdit();
   const [event, setEvent] = useState(initialEvent);
   const [editing, setEditing] = useState(false);
   const [showFullTitle, setShowFullTitle] = useState(false);
-  const [weeks, setWeeks] = useState(() => withCurrentWeek(serverWeeks));
-  const [week, setWeek] = useState(initialWeek);
+  // Reset from the server's list whenever router.refresh() brings a new one.
+  const [weeks, setWeeks] = useState(serverWeeks);
+  const [prevServerWeeks, setPrevServerWeeks] = useState(serverWeeks);
+  if (serverWeeks !== prevServerWeeks) {
+    setPrevServerWeeks(serverWeeks);
+    setWeeks(serverWeeks);
+  }
+  const [pickedWeek, setPickedWeek] = useState(initialWeek);
   const [rows, setRows] = useState<PointsTableRow[] | null>(initialRows);
   const [error, setError] = useState<string | null>(null);
   const requestIdRef = useRef(0);
   const preloadedWeekRef = useRef<string | null>(initialRows ? initialWeek : null);
+  const firstServerWeeksRef = useRef(serverWeeks);
   const eventId = event.event_id;
 
-  // Week 1 is the event's earliest week.
+  // The picked week while the event still has it, else the default one (e.g.
+  // after it was deleted). Null when the event has no weeks.
+  const week =
+    pickedWeek && weeks.some((w) => w.week_date === pickedWeek) ? pickedWeek : defaultWeek(weeks, getToday());
+  const selectedWeek = weeks.find((w) => w.week_date === week) ?? null;
+
+  // Week 1 is the event's earliest week (`weeks` is oldest first).
   const weekNumber = useMemo(() => {
-    const ascending = [...weeks].sort();
-    return (w: string) => ascending.indexOf(w) + 1;
+    const starts = weeks.map((w) => w.week_date);
+    return (w: string) => starts.indexOf(w) + 1;
   }, [weeks]);
 
+  // Only called while there's a week: the effect below checks, and the buttons
+  // that call it only show then.
   const loadPoints = useCallback(async () => {
     // Guards against a stale response (from a previous week's request)
     // resolving after a newer one and overwriting the table with wrong data.
@@ -87,12 +98,12 @@ export function EventWorkspace({
   }, [eventId, week]);
 
   useEffect(() => {
-    const localWeek = getCurrentWeekMonday();
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (localWeek !== initialWeek) setWeek(localWeek);
+    const localWeek = defaultWeek(firstServerWeeksRef.current, getToday());
+    if (localWeek !== initialWeek) setPickedWeek(localWeek);
   }, [initialWeek]);
 
   useEffect(() => {
+    if (!week) return;
     // The server already rendered this week's rows — skip the first fetch.
     const preloaded = preloadedWeekRef.current === week;
     preloadedWeekRef.current = null;
@@ -149,16 +160,26 @@ export function EventWorkspace({
           onWeeksChange={setWeeks}
           weekNumber={weekNumber}
           selectedWeek={week}
-          onChange={setWeek}
+          onChange={setPickedWeek}
         />
         <div className="flex shrink-0 items-center gap-2">
           <IconLink href={`/dashboard/events/${eventId}/leaderboard`} label="Leaderboard" tone="primary">
             <TrophyIcon />
           </IconLink>
-          {editable && (
+          {editable && selectedWeek && (
             <>
-              <AddParticipantsButton eventId={eventId} week={week} weekNumber={weekNumber(week)} onAdded={loadPoints} />
-              <BulkImportButton eventId={eventId} week={week} weekNumber={weekNumber(week)} onImported={loadPoints} />
+              <AddParticipantsButton
+                eventId={eventId}
+                week={selectedWeek}
+                weekNumber={weekNumber(selectedWeek.week_date)}
+                onAdded={loadPoints}
+              />
+              <BulkImportButton
+                eventId={eventId}
+                week={selectedWeek}
+                weekNumber={weekNumber(selectedWeek.week_date)}
+                onImported={loadPoints}
+              />
             </>
           )}
           <ExportEventButton eventId={eventId} weeks={weeks} />
@@ -170,12 +191,28 @@ export function EventWorkspace({
           )}
         </div>
       </div>
-      {error && <ErrorState message={error} onRetry={loadPoints} />}
-      {!error && rows === null && <Loading label="Loading points…" />}
-      {!error && rows !== null && (
+      {!selectedWeek ? (
+        <Panel bodyClassName="px-5 py-4">
+          <p className="text-sm text-muted-foreground">
+            {editable ? (
+              <>
+                No weeks yet. Use <span className="font-bold text-foreground">Add Week</span> to pick this event&apos;s
+                dates.
+              </>
+            ) : (
+              "No weeks yet."
+            )}
+          </p>
+        </Panel>
+      ) : error ? (
+        <ErrorState message={error} onRetry={loadPoints} />
+      ) : rows === null ? (
+        <Loading label="Loading points…" />
+      ) : (
         <PointsTable
           rows={rows}
-          label={formatWeekLabel(weekNumber(week), week)}
+          week={selectedWeek}
+          label={formatWeekLabel(weekNumber(selectedWeek.week_date), selectedWeek)}
           onRowUpdated={(updated) =>
             setRows((prev) => (prev ? prev.map((r) => (r.discord_id === updated.discord_id ? updated : r)) : prev))
           }
