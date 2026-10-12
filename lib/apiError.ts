@@ -10,12 +10,26 @@ const POSTGRES_STATUS: Record<string, number> = {
   "22P02": 400, // invalid_text_representation (e.g. bad uuid/date)
 };
 
+// A column the code reads or writes doesn't exist: the database is behind this
+// version of the app because a SQL update hasn't been run in Supabase yet.
+// 42703 is Postgres's undefined_column (reading it); PGRST204 is PostgREST
+// not finding it when writing.
+const MISSING_COLUMN_CODES = new Set(["42703", "PGRST204"]);
+const MISSING_COLUMN_MESSAGE =
+  "The database is missing a column this version of the app needs. Run the latest SQL update in Supabase.";
+
+export function isMissingColumn(err: unknown): boolean {
+  const code = (err as { code?: string } | null)?.code;
+  return !!code && MISSING_COLUMN_CODES.has(code);
+}
+
 // Every route handler funnels its errors through here instead of returning
 // raw DB/exception messages with a hardcoded 500 — logs the real error
 // server-side (the only observability this app has) and maps known
 // client-caused Postgres errors to the right status code.
 export function errorResponse(err: unknown, fallbackMessage = "Something went wrong") {
   console.error(err);
+  if (isMissingColumn(err)) return NextResponse.json({ error: MISSING_COLUMN_MESSAGE }, { status: 500 });
   const code = (err as { code?: string } | null)?.code;
   const status = (code && POSTGRES_STATUS[code]) || 500;
   const message =

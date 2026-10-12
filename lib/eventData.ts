@@ -1,8 +1,20 @@
 import "server-only";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { computeLeaderboard } from "@/lib/points";
+import { isMissingColumn } from "@/lib/apiError";
 import { mondayWeek, sortWeeks } from "@/lib/week";
 import type { EventWeek, LeaderboardRow, PointsRowWithUser } from "@/types";
+
+// The event's event_weeks rows. Until the SQL update that adds end_date has
+// been run, they're read without it (each then runs Monday–Sunday) so the
+// weeks still show instead of vanishing.
+async function selectEventWeeks(eventId: string) {
+  const supabase = getSupabaseAdmin();
+  const result = await supabase.from("event_weeks").select("week_date, end_date").eq("event_id", eventId);
+  if (!isMissingColumn(result.error)) return result;
+  console.error("[event_weeks] no end_date column yet: run the SQL update in Supabase", result.error);
+  return supabase.from("event_weeks").select("week_date").eq("event_id", eventId);
+}
 
 // An event's weeks, oldest first: the weeks added through "Add Week"
 // (event_weeks, with the dates that were picked), plus any week that only has
@@ -13,15 +25,15 @@ export async function loadEventWeeks(eventId: string): Promise<EventWeek[]> {
   const supabase = getSupabaseAdmin();
   const [points, planned] = await Promise.all([
     supabase.from("points").select("week_date").eq("event_id", eventId),
-    supabase.from("event_weeks").select("week_date, end_date").eq("event_id", eventId),
+    selectEventWeeks(eventId),
   ]);
   if (points.error) throw points.error;
   if (planned.error) console.error("[event_weeks]", planned.error);
 
   const weeks = new Map<string, EventWeek>();
-  for (const row of planned.error ? [] : (planned.data ?? [])) {
-    const week_date = row.week_date as string;
-    weeks.set(week_date, row.end_date ? { week_date, end_date: row.end_date as string } : mondayWeek(week_date));
+  const plannedRows = (planned.error ? [] : (planned.data ?? [])) as { week_date: string; end_date?: string | null }[];
+  for (const { week_date, end_date } of plannedRows) {
+    weeks.set(week_date, end_date ? { week_date, end_date } : mondayWeek(week_date));
   }
   for (const row of points.data ?? []) {
     const week_date = row.week_date as string;
