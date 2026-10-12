@@ -93,6 +93,63 @@ export interface LeaderboardRow {
   rank: number;
 }
 
+// ─── Discord bot API (app/api/bot/*) ─────────────────────────────────────────
+// Read-only JSON for the Discord bot in bot/. Keep in sync with
+// bot/src/api/types.ts, which copies these so the bot can deploy on its own.
+
+// event = all of an event's weeks, week = one Monday–Sunday week, day = one day.
+export const BOT_TIMEFRAMES = ["event", "week", "day"] as const;
+
+export type BotTimeframe = (typeof BOT_TIMEFRAMES)[number];
+
+export interface BotEvent {
+  event_id: string;
+  event_name: string;
+  event_type: EventType;
+  event_type_label: string;
+  month: string;
+  created_at: string;
+}
+
+export interface BotPlayer {
+  discord_id: string;
+  discord_username: string;
+}
+
+export interface BotPeriod {
+  timeframe: BotTimeframe;
+  week_date: string | null; // the week's Monday (week and day timeframes)
+  date: string | null; // the day itself (day timeframe)
+  label: string; // "All weeks · Sep 7 - Oct 4, 2026", "Week 2 · Sep 21 - 27, 2026", "Tue, Sep 22, 2026"
+}
+
+export interface BotLeaderboard {
+  event: BotEvent | null; // null = all events
+  period: BotPeriod;
+  rows: LeaderboardRow[]; // players with points in the period, best first
+  participants: number; // players with a points row in scope, including those on 0
+  generated_at: string;
+}
+
+export interface BotBreakdownItem {
+  label: string;
+  points: number;
+}
+
+export interface BotUserStats {
+  player: BotPlayer;
+  event: BotEvent | null; // null = all events
+  period: BotPeriod;
+  points: number;
+  rank: number | null; // null when the player has no points in the period
+  ranked_players: number; // players with points in the period
+  active_days: number; // distinct days with points
+  // Each day (week timeframe), each week (one event) or each event (all
+  // events) the points came from. Empty for the day timeframe.
+  breakdown: BotBreakdownItem[];
+  generated_at: string;
+}
+
 export type ImportFormat = "weekly" | "total";
 
 export interface ParsedImportRow extends DayValues {

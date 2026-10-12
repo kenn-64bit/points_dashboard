@@ -1,0 +1,2 @@
+# The Discord bot runs on its own always-on host, not on Vercel (see bot/README.md).
+/bot

@@ -1,3 +1,6 @@
+import { DAY_COLUMNS } from "@/types";
+import type { Day } from "@/types";
+
 // All points rows are keyed to the Monday of their week. Any date an admin picks
 // (or the current date, for a new import) is silently normalized to that Monday —
 // the schema's points_week_is_monday CHECK is the final backstop against drift.
@@ -82,4 +85,26 @@ export function formatWeeksSpan(firstMondayStr: string, lastMondayStr: string): 
   const start = `${month(monday)} ${day(monday)}${sameYear ? "" : `, ${year(monday)}`}`;
   const end = sameMonth ? day(sunday) : `${month(sunday)} ${day(sunday)}`;
   return `${start} - ${end}, ${year(sunday)}`;
+}
+
+// The points column a date's score is kept in, e.g. "2026-09-22" (a Tuesday)
+// → "tuesday". Pair with normalizeToMonday for the row's week_date. Expects a
+// valid YYYY-MM-DD.
+export function dayColumnOf(dateStr: string): Day {
+  const parsed = new Date(`${dateStr}T00:00:00Z`);
+  const isoDow = parsed.getUTCDay() === 0 ? 7 : parsed.getUTCDay(); // 1=Mon..7=Sun
+  return DAY_COLUMNS[isoDow - 1];
+}
+
+// e.g. "Tue, Sep 22, 2026".
+export function formatDayLabel(dateStr: string): string {
+  const date = new Date(`${dateStr}T00:00:00Z`);
+  if (Number.isNaN(date.getTime())) return dateStr;
+  return date.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  });
 }

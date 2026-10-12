@@ -1,6 +1,8 @@
 import type { LeaderboardRow, PointsRowWithUser } from "@/types";
 
-export function computeLeaderboard(rows: PointsRowWithUser[]): LeaderboardRow[] {
+export function computeLeaderboard(
+  rows: Pick<PointsRowWithUser, "discord_id" | "discord_username" | "total_points">[]
+): LeaderboardRow[] {
   const byUser = new Map<string, { discord_username: string; total_points: number }>();
 
   for (const row of rows) {

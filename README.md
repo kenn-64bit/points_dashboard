@@ -46,6 +46,11 @@ The server enforces these permissions. The interface also hides controls a user 
 - Times are shown in the viewer's local time zone.
 - Loading, error and not-found screens throughout.
 
+### Discord bot
+- `/leaderboard` and `/user-stats` slash commands show the standings and a player's stats in Discord, per event, per week or per day, with buttons to page through long leaderboards.
+- The bot lives in [`bot/`](bot/README.md) and runs as its own always-on Node.js process, not on Vercel. It reads the dashboard's read-only `/api/bot/*` routes.
+- The bot API stays off until `BOT_API_SECRET` (32+ characters, e.g. from `openssl rand -base64 32`) is set in the dashboard's environment. The bot uses the same value. See [`bot/README.md`](bot/README.md) for setup.
+
 ## Built with
 
 - **Next.js 16** (App Router) and **React 19**, written in TypeScript
@@ -54,6 +59,7 @@ The server enforces these permissions. The interface also hides controls a user 
 - **Upstash Redis** for login rate limiting
 - **jose** for signed session cookies
 - **PapaParse** and **SheetJS** for reading CSV and Excel files
+- **discord.js** for the Discord bot
 
 If no Supabase credentials are set, the app uses built-in sample data held in memory, so you can explore every feature without a backend. That sample data resets whenever the server restarts.
 
@@ -65,4 +71,5 @@ components/   UI, grouped into auth, common, dashboard and team
 lib/          Auth, data access, validation, week math, import parsing, audit logging
 types/        Shared TypeScript types
 scripts/      Helper scripts (e.g. password hashing)
+bot/          Discord bot, a separate Node.js package (see bot/README.md)
 ```

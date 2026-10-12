@@ -1,0 +1,23 @@
+{
+  "name": "discord-points-bot",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Discord slash commands for the Discord Points Manager leaderboards.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env src/index.ts",
+    "dev": "node --env-file-if-exists=.env --watch src/index.ts",
+    "deploy-commands": "node --env-file-if-exists=.env src/deploy-commands.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "discord.js": "^14.27.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "typescript": "^5.9"
+  }
+}

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { apiRateLimit, mutationRateLimit, bulkImportRateLimit, loginRateLimit } from "@/lib/rateLimit";
+import { apiRateLimit, botApiRateLimit, mutationRateLimit, bulkImportRateLimit, loginRateLimit } from "@/lib/rateLimit";
 import { SESSION_COOKIE, verifySession } from "@/lib/auth/session";
 
 export const config = {
@@ -7,6 +7,10 @@ export const config = {
 };
 
 const PUBLIC_PATHS = new Set(["/login", "/api/auth/login", "/api/auth/logout"]);
+
+// The Discord bot's read API. The bot has no session cookie: these route
+// handlers check its bearer token instead (lib/auth/botToken.ts).
+const BOT_API_PREFIX = "/api/bot/";
 
 // Vercel sets x-real-ip itself. For x-forwarded-for, the first entry is
 // whatever the client sent, so only the last hop (added by our proxy) is used.
@@ -52,6 +56,7 @@ function contentSecurityPolicy(nonce: string): string {
 export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
   const isApi = pathname.startsWith("/api/");
+  const isBotApi = pathname.startsWith(BOT_API_PREFIX);
 
   if (isApi && isCrossOriginWrite(request)) {
     return NextResponse.json({ error: "Cross-origin request blocked" }, { status: 403 });
@@ -65,9 +70,11 @@ export async function proxy(request: NextRequest) {
         ? loginRateLimit
         : pathname.startsWith("/api/users/bulk-import")
           ? bulkImportRateLimit
-          : request.method === "GET"
-            ? apiRateLimit
-            : mutationRateLimit;
+          : isBotApi
+            ? botApiRateLimit
+            : request.method === "GET"
+              ? apiRateLimit
+              : mutationRateLimit;
 
     const { success, limit, remaining, reset } = await limiter.limit(ip);
 
@@ -89,7 +96,7 @@ export async function proxy(request: NextRequest) {
   // pages re-check against the roster via getCurrentUser() (lib/auth/dal.ts).
   const session = await verifySession(request.cookies.get(SESSION_COOKIE)?.value);
 
-  if (!session && !PUBLIC_PATHS.has(pathname)) {
+  if (!session && !PUBLIC_PATHS.has(pathname) && !isBotApi) {
     if (isApi) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("next", `${pathname}${search}`);
