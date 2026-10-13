@@ -2,7 +2,6 @@
 
 # dependencies
 /node_modules
-/bot/node_modules
 /.pnp
 .pnp.*
 .yarn/*
@@ -34,7 +33,6 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 !.env.local.example
-!/bot/.env.example
 
 # vercel
 .vercel
@@ -50,7 +48,6 @@ CLAUDE.local.md
 
 DEPLOY.md
 DESIGN.md
-DISCORD_BOT.md
 AUDIT_LOG.md
 DISCORD_POINTS_MANAGER.md
 DEPLOY_CHECKLIST.md

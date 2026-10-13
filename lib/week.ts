@@ -10,19 +10,8 @@ import type { Day, EventWeek } from "@/types";
 
 export const MAX_WEEK_DAYS = 7;
 
-function toUTCDate(d: Date): Date {
-  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
-}
-
 function parseDate(dateStr: string): Date {
   return new Date(`${dateStr}T00:00:00Z`);
-}
-
-export function getMondayOf(date: Date): Date {
-  const utc = toUTCDate(date);
-  const isoDow = utc.getUTCDay() === 0 ? 7 : utc.getUTCDay(); // 1=Mon..7=Sun
-  utc.setUTCDate(utc.getUTCDate() - (isoDow - 1));
-  return utc;
 }
 
 export function formatDate(date: Date): string {
@@ -53,11 +42,6 @@ export function getToday(): string {
 // The Monday–Sunday week starting on `monday`.
 export function mondayWeek(monday: string): EventWeek {
   return { week_date: monday, end_date: addDays(monday, MAX_WEEK_DAYS - 1) };
-}
-
-// The Monday–Sunday week `date` falls in.
-export function mondayWeekOf(date: string): EventWeek {
-  return mondayWeek(formatDate(getMondayOf(parseDate(date))));
 }
 
 export function sortWeeks(weeks: EventWeek[]): EventWeek[] {
@@ -93,12 +77,6 @@ export function weekDays(week: EventWeek): WeekDay[] {
 
 export function weekHasDay(week: EventWeek, day: Day): boolean {
   return weekDays(week).some((d) => d.day === day);
-}
-
-// The date a points column stands for in the week starting on `weekDate`.
-export function dateOfDay(weekDate: string, day: Day): string {
-  const offset = (DAY_COLUMNS.indexOf(day) - DAY_COLUMNS.indexOf(dayColumnOf(weekDate)) + 7) % 7;
-  return addDays(weekDate, offset);
 }
 
 export function weekContaining(weeks: EventWeek[], date: string): EventWeek | undefined {
@@ -161,19 +139,6 @@ export function dayColumnOf(dateStr: string): Day {
   const parsed = parseDate(dateStr);
   const isoDow = parsed.getUTCDay() === 0 ? 7 : parsed.getUTCDay(); // 1=Mon..7=Sun
   return DAY_COLUMNS[isoDow - 1];
-}
-
-// e.g. "Tue, Sep 22, 2026".
-export function formatDayLabel(dateStr: string): string {
-  const date = parseDate(dateStr);
-  if (Number.isNaN(date.getTime())) return dateStr;
-  return date.toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "UTC",
-  });
 }
 
 // e.g. "Thu 20", as the points table and editor head a day.

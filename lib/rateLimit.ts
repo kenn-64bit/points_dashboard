@@ -48,8 +48,3 @@ export const bulkImportRateLimit = makeLimiter(Ratelimit.slidingWindow(10, "60 m
 
 // Login attempts — tight, to slow down password guessing against the roster.
 export const loginRateLimit = makeLimiter(Ratelimit.slidingWindow(10, "15 m"), "ratelimit:login");
-
-// The Discord bot's read API (/api/bot/*). All of a server's commands arrive
-// from the bot's one host, so it gets a roomier window of its own instead of
-// sharing the per-IP GET limit above.
-export const botApiRateLimit = makeLimiter(Ratelimit.slidingWindow(300, "60 s"), "ratelimit:bot");

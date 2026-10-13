@@ -96,8 +96,7 @@ const USERNAME_RULES: { pattern: RegExp; problem: string }[] = [
   // including a leading @, which stays allowed since "@name" is how many
   // people write a Discord handle.
   { pattern: /^[=+\-]/, problem: "looks like a spreadsheet formula" },
-  // Links and script URLs. The bot shows names in embeds, where Discord turns
-  // URLs and [text](url) into clickable links.
+  // Links and script URLs.
   { pattern: /:\/\/|\bwww\.|\bdiscord(?:app)?\.(?:gg|com)\/|\b(?:java|vb)script:/i, problem: "can't contain links" },
 ];
 

@@ -105,7 +105,6 @@ function nextAuditId(): number {
 
 type Row = Record<string, unknown>;
 type Filter = [string, unknown];
-type Comparison = "lt" | "gte" | "lte";
 type Op =
   | { kind: "select" }
   | { kind: "insert"; payload: Row | Row[] }
@@ -113,30 +112,11 @@ type Op =
   | { kind: "upsert"; payload: Row | Row[]; onConflict?: string; ignoreDuplicates?: boolean }
   | { kind: "delete" };
 
-// An ILIKE pattern as a case-insensitive RegExp: % (or *, which PostgREST
-// reads as %) matches any run of characters, _ one character, and a
-// backslash makes the next character literal.
-function likePatternToRegExp(pattern: string): RegExp {
-  const literal = (ch: string) => ch.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const chars = Array.from(pattern);
-  let source = "";
-  for (let i = 0; i < chars.length; i++) {
-    const ch = chars[i];
-    if (ch === "\\" && i + 1 < chars.length) source += literal(chars[++i]);
-    else if (ch === "%" || ch === "*") source += ".*";
-    else if (ch === "_") source += ".";
-    else source += literal(ch);
-  }
-  return new RegExp(`^${source}$`, "is");
-}
-
 class MockQueryBuilder<T extends Row> implements PromiseLike<{ data: unknown; error: { message: string } | null }> {
   private filters: Filter[] = [];
   private inFilters: [string, unknown[]][] = [];
-  private compareFilters: [string, Comparison, number | string][] = [];
-  private ilikeFilters: [string, RegExp][] = [];
+  private ltFilters: [string, number | string][] = [];
   private orderSpec: { col: string; ascending: boolean } | null = null;
-  private rangeSpec: { from: number; to: number } | null = null;
   private limitN: number | null = null;
   private selectSpec: string | null = null;
   private op: Op = { kind: "select" };
@@ -157,28 +137,11 @@ class MockQueryBuilder<T extends Row> implements PromiseLike<{ data: unknown; er
     return this;
   }
   lt(col: string, value: number | string) {
-    this.compareFilters.push([col, "lt", value]);
-    return this;
-  }
-  gte(col: string, value: number | string) {
-    this.compareFilters.push([col, "gte", value]);
-    return this;
-  }
-  lte(col: string, value: number | string) {
-    this.compareFilters.push([col, "lte", value]);
-    return this;
-  }
-  ilike(col: string, pattern: string) {
-    this.ilikeFilters.push([col, likePatternToRegExp(pattern)]);
+    this.ltFilters.push([col, value]);
     return this;
   }
   order(col: string, opts?: { ascending?: boolean }) {
     this.orderSpec = { col, ascending: opts?.ascending ?? true };
-    return this;
-  }
-  // Inclusive on both ends, like Supabase's .range().
-  range(from: number, to: number) {
-    this.rangeSpec = { from, to };
     return this;
   }
   limit(n: number) {
@@ -225,11 +188,7 @@ class MockQueryBuilder<T extends Row> implements PromiseLike<{ data: unknown; er
     return (
       this.filters.every(([col, value]) => (row as Row)[col] === value) &&
       this.inFilters.every(([col, values]) => values.includes((row as Row)[col])) &&
-      this.compareFilters.every(([col, op, value]) => {
-        const cell = (row as Row)[col] as number | string;
-        return op === "lt" ? cell < value : op === "gte" ? cell >= value : cell <= value;
-      }) &&
-      this.ilikeFilters.every(([col, pattern]) => pattern.test(String((row as Row)[col] ?? "")))
+      this.ltFilters.every(([col, value]) => ((row as Row)[col] as number | string) < value)
     );
   }
 
@@ -387,7 +346,6 @@ class MockQueryBuilder<T extends Row> implements PromiseLike<{ data: unknown; er
           return ascending ? cmp : -cmp;
         });
       }
-      if (this.rangeSpec) result = result.slice(this.rangeSpec.from, this.rangeSpec.to + 1);
       if (this.limitN != null) result = result.slice(0, this.limitN);
       return this.wrapResult(result);
     } catch (err) {
