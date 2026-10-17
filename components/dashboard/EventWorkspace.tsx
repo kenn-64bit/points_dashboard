@@ -10,7 +10,7 @@ import { ExportEventButton } from "@/components/dashboard/ExportEventButton";
 import { DeleteEventButton } from "@/components/dashboard/DeleteEventButton";
 import { useCanEdit } from "@/components/auth/RoleProvider";
 import { IconButton, IconLink } from "@/components/common/IconButton";
-import { PencilIcon, TrophyIcon } from "@/components/common/icons";
+import { GridIcon, PencilIcon, TrophyIcon } from "@/components/common/icons";
 import { ErrorState } from "@/components/common/ErrorState";
 import { Panel } from "@/components/common/Panel";
 import { Skeleton, SkeletonRegion } from "@/components/common/Skeleton";
@@ -51,6 +51,8 @@ export function EventWorkspace({
   const [event, setEvent] = useState(initialEvent);
   const [editing, setEditing] = useState(false);
   const [showFullTitle, setShowFullTitle] = useState(false);
+  // Add / import / export sit behind one toggle and stay out until it's closed.
+  const [toolsOpen, setToolsOpen] = useState(false);
   // Reset from the server's list whenever router.refresh() brings a new one.
   const [weeks, setWeeks] = useState(serverWeeks);
   const [prevServerWeeks, setPrevServerWeeks] = useState(serverWeeks);
@@ -166,23 +168,36 @@ export function EventWorkspace({
           <IconLink href={`/dashboard/events/${eventId}/leaderboard`} label="Leaderboard" tone="primary">
             <TrophyIcon />
           </IconLink>
-          {editable && selectedWeek && (
-            <>
-              <AddParticipantsButton
-                eventId={eventId}
-                week={selectedWeek}
-                weekNumber={weekNumber(selectedWeek.week_date)}
-                onAdded={loadPoints}
-              />
-              <BulkImportButton
-                eventId={eventId}
-                week={selectedWeek}
-                weekNumber={weekNumber(selectedWeek.week_date)}
-                onImported={loadPoints}
-              />
-            </>
+          {toolsOpen && (
+            <div id="event-tools" className="flex items-center gap-2 tools-in">
+              {editable && selectedWeek && (
+                <>
+                  <AddParticipantsButton
+                    eventId={eventId}
+                    week={selectedWeek}
+                    weekNumber={weekNumber(selectedWeek.week_date)}
+                    onAdded={loadPoints}
+                  />
+                  <BulkImportButton
+                    eventId={eventId}
+                    week={selectedWeek}
+                    weekNumber={weekNumber(selectedWeek.week_date)}
+                    onImported={loadPoints}
+                  />
+                </>
+              )}
+              <ExportEventButton eventId={eventId} weeks={weeks} />
+            </div>
           )}
-          <ExportEventButton eventId={eventId} weeks={weeks} />
+          <IconButton
+            label={toolsOpen ? "Hide data tools" : "Data tools"}
+            pressed={toolsOpen}
+            aria-expanded={toolsOpen}
+            aria-controls="event-tools"
+            onClick={() => setToolsOpen((v) => !v)}
+          >
+            <GridIcon />
+          </IconButton>
           {editable && (
             <>
               <span aria-hidden className="mx-1 h-6 border-l border-dashed border-line" />

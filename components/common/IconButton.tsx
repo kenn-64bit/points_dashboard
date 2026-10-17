@@ -14,8 +14,11 @@ const TONE_CLASSES: Record<Tone, string> = {
     "border border-control-border bg-control text-danger-ink hover:border-danger hover:bg-danger hover:text-danger-foreground",
 };
 
-function iconButtonClasses(tone: Tone, className: string): string {
-  return `group relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-[background-color,border-color,color,transform] duration-150 ease-out active:translate-y-px disabled:cursor-not-allowed disabled:opacity-50 ${TONE_CLASSES[tone]} ${className}`;
+// A toggle that's switched on keeps the primary color while it stays on.
+const PRESSED_CLASSES = "border border-primary bg-primary text-primary-foreground";
+
+function iconButtonClasses(tone: Tone, className: string, pressed = false): string {
+  return `group relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-[background-color,border-color,color,transform] duration-150 ease-out active:translate-y-px disabled:cursor-not-allowed disabled:opacity-50 ${pressed ? PRESSED_CLASSES : TONE_CLASSES[tone]} ${className}`;
 }
 
 // The action's name, floating above the icon on hover or keyboard focus. The
@@ -38,6 +41,8 @@ interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   label: string;
   tone?: Tone;
   tooltipAlign?: TooltipAlign;
+  // Set for on/off toggles: adds aria-pressed and the pressed look.
+  pressed?: boolean;
 }
 
 export function IconButton({
@@ -47,10 +52,17 @@ export function IconButton({
   className = "",
   children,
   type = "button",
+  pressed,
   ...props
 }: IconButtonProps) {
   return (
-    <button {...props} type={type} aria-label={label} className={iconButtonClasses(tone, className)}>
+    <button
+      {...props}
+      type={type}
+      aria-label={label}
+      aria-pressed={pressed}
+      className={iconButtonClasses(tone, className, pressed)}
+    >
       {children}
       <Tooltip label={label} align={tooltipAlign} />
     </button>

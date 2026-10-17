@@ -317,6 +317,17 @@
   animation: toast-in 0.2s ease-out;
 }
 
+/* Collapsible toolbars slide out from their toggle on the right. */
+@keyframes tools-in {
+  from {
+    opacity: 0;
+    transform: translateX(0.75rem);
+  }
+}
+@utility tools-in {
+  animation: tools-in 0.18s ease-out;
+}
+
 /* Theme switch: the new theme is revealed by a circle growing from the
    switch (see ThemeProvider); the old snapshot stays put underneath. */
 ::view-transition-old(root),
