@@ -50,6 +50,19 @@ Prevent brute-force login attacks.
    UPSTASH_REDIS_REST_TOKEN=your-token
    ```
 
+### 🤖 Optional (Discord Bot API)
+Required for the Discord bot route (`/api/bot/leaderboard`). Without it, every bot request is refused (401).
+
+1. Generate a random key (32+ characters):
+   ```bash
+   openssl rand -hex 32
+   ```
+2. Add to `.env.local`, and in Vercel under Project → Settings → Environment Variables (then redeploy):
+   ```
+   BOT_API_KEY=your-random-key
+   ```
+3. The bot sends it as `Authorization: Bearer <BOT_API_KEY>`. Never give the bot the Supabase service role key.
+
 ---
 
 ## 3️⃣ Run It

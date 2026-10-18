@@ -32,7 +32,7 @@ export function DeleteEventButton({ eventId, eventName }: { eventId: string; eve
 
   return (
     <>
-      <IconButton label="Delete event" tone="danger" tooltipAlign="end" onClick={() => setOpen(true)}>
+      <IconButton label="Delete event" tone="danger" onClick={() => setOpen(true)}>
         <TrashIcon />
       </IconButton>
 
