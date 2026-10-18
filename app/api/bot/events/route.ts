@@ -42,6 +42,10 @@ export async function GET(request: NextRequest) {
     const events = ((data ?? []) as { event_name: string }[]).map((event) => event.event_name);
     return NextResponse.json({
       events,
+      // One flag per menu slot, for each BotGhost option's "In the menu:
+      // Variable" setting (true hides the option), so slots past the last
+      // event are hidden instead of showing a raw {getevents.response.events[N]}.
+      hidden: Array.from({ length: EVENTS_PAGE_SIZE }, (_, i) => i >= events.length),
       page,
       pageSize: EVENTS_PAGE_SIZE,
       totalRows,
