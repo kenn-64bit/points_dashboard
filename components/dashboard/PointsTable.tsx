@@ -55,11 +55,14 @@ export function PointsTable({
   rows,
   week,
   label,
+  crosshair = true,
   onRowUpdated,
 }: {
   rows: PointsTableRow[];
   week: EventWeek;
   label?: string;
+  // Tint the hovered cell's row and column.
+  crosshair?: boolean;
   onRowUpdated: (row: PointsTableRow) => void;
 }) {
   const editable = useCanEdit();
@@ -75,7 +78,6 @@ export function PointsTable({
 
   const days = useMemo(() => weekDays(week), [week]);
   const totalCol = days.length + 1;
-  const actionsCol = totalCol + 1;
   // A sort on a day this week doesn't have (after switching weeks) is ignored.
   const activeSort = sort && days.some((d) => d.day === sort.day) ? sort : null;
   const hasDrafts = Object.keys(drafts).length > 0;
@@ -109,6 +111,7 @@ export function PointsTable({
   }
 
   function cellClass(rowId: string | null, colIndex: number): string {
+    if (!crosshair) return "";
     const highlighted = hoveredCol === colIndex || (rowId !== null && hoveredRow === rowId);
     return highlighted ? HOVER_TINT : "";
   }
@@ -209,15 +212,10 @@ export function PointsTable({
             })}
             <th
               onMouseEnter={() => setHoveredCol(totalCol)}
-              className={`px-5 py-4 text-center font-extrabold text-foreground transition-colors ${cellClass(null, totalCol)}`}
+              className={`px-5 py-4 text-center font-extrabold text-foreground transition-colors ${editable ? "w-40" : ""} ${cellClass(null, totalCol)}`}
             >
               Total
             </th>
-            {editable && (
-              <th onMouseEnter={() => setHoveredCol(actionsCol)} className={`w-24 transition-colors ${cellClass(null, actionsCol)}`}>
-                <span className="sr-only">Actions</span>
-              </th>
-            )}
           </tr>
         </thead>
         <tbody className="divide-y divide-dashed divide-line">
@@ -230,7 +228,7 @@ export function PointsTable({
               <tr key={row.discord_id} onMouseEnter={() => setHoveredRow(row.discord_id)} className="divide-x divide-border">
                 <td
                   onMouseEnter={() => setHoveredCol(null)}
-                  className={`px-5 py-4 font-bold text-foreground transition-colors ${hoveredRow === row.discord_id ? HOVER_TINT : ""}`}
+                  className={`px-5 py-4 font-bold text-foreground transition-colors ${crosshair && hoveredRow === row.discord_id ? HOVER_TINT : ""}`}
                 >
                   {row.discord_username}
                 </td>
@@ -284,23 +282,17 @@ export function PointsTable({
                 })}
                 <td
                   onMouseEnter={() => setHoveredCol(totalCol)}
-                  className={`px-5 py-4 text-center transition-colors ${cellClass(row.discord_id, totalCol)}`}
+                  className={`text-center transition-colors ${editable ? "w-40 px-3 py-2.5" : "px-5 py-4"} ${cellClass(row.discord_id, totalCol)}`}
                 >
-                  <Badge tone="total" className={total === 0 ? ZERO_FADE : ""}>
-                    {total}
-                  </Badge>
-                </td>
-                {editable && (
-                  <td
-                    onMouseEnter={() => setHoveredCol(actionsCol)}
-                    className={`w-24 px-3 py-2.5 transition-colors ${cellClass(row.discord_id, actionsCol)}`}
-                  >
-                    {draft && (
-                      <div className="flex items-center justify-end gap-1.5">
+                  <div className="flex items-center justify-center gap-1.5">
+                    <Badge tone="total" className={total === 0 ? ZERO_FADE : ""}>
+                      {total}
+                    </Badge>
+                    {editable && draft && (
+                      <>
                         <IconButton
                           label={saving ? "Saving…" : "Save points"}
                           tone="primary"
-                          tooltipAlign="end"
                           onClick={() => saveRow(row)}
                           disabled={saving}
                           className="h-8 w-8"
@@ -309,17 +301,16 @@ export function PointsTable({
                         </IconButton>
                         <IconButton
                           label="Discard changes"
-                          tooltipAlign="end"
                           onClick={() => discardRow(row)}
                           disabled={saving}
                           className="h-8 w-8"
                         >
                           <XIcon className="h-4 w-4" />
                         </IconButton>
-                      </div>
+                      </>
                     )}
-                  </td>
-                )}
+                  </div>
+                </td>
               </tr>
             );
           })}

@@ -8,6 +8,7 @@ import { BulkImportButton } from "@/components/dashboard/BulkImportButton";
 import { AddParticipantsButton } from "@/components/dashboard/AddParticipantsButton";
 import { ExportEventButton } from "@/components/dashboard/ExportEventButton";
 import { DeleteEventButton } from "@/components/dashboard/DeleteEventButton";
+import { TableSettingsButton, useCrosshairSetting } from "@/components/dashboard/TableSettingsButton";
 import { useCanEdit } from "@/components/auth/RoleProvider";
 import { IconButton, IconLink } from "@/components/common/IconButton";
 import { GridIcon, PencilIcon, TrophyIcon } from "@/components/common/icons";
@@ -62,6 +63,7 @@ export function EventWorkspace({
   }
   const [pickedWeek, setPickedWeek] = useState(initialWeek);
   const [rows, setRows] = useState<PointsTableRow[] | null>(initialRows);
+  const [crosshair, setCrosshair] = useCrosshairSetting();
   const [error, setError] = useState<string | null>(null);
   const requestIdRef = useRef(0);
   const preloadedWeekRef = useRef<string | null>(initialRows ? initialWeek : null);
@@ -198,6 +200,7 @@ export function EventWorkspace({
           >
             <GridIcon />
           </IconButton>
+          <TableSettingsButton crosshair={crosshair} onCrosshairChange={setCrosshair} />
           {editable && (
             <>
               <span aria-hidden className="mx-1 h-6 border-l border-dashed border-line" />
@@ -229,6 +232,7 @@ export function EventWorkspace({
         <PointsTable
           rows={rows}
           week={selectedWeek}
+          crosshair={crosshair}
           label={formatWeekLabel(weekNumber(selectedWeek.week_date), selectedWeek)}
           onRowUpdated={(updated) =>
             setRows((prev) => (prev ? prev.map((r) => (r.discord_id === updated.discord_id ? updated : r)) : prev))
