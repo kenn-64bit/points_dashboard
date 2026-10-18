@@ -38,6 +38,10 @@ interface BotPage {
   pageSize: number;
   totalRows: number;
   totalPages: number;
+  showing: number; // rows on this page
+  prevPage: number | null; // null on the first page
+  nextPage: number | null; // null on the last page
+  footer: string; // "Showing 10 of 14 participants · Page 1 of 2"
 }
 
 export type BotLeaderboard =
@@ -134,9 +138,19 @@ function paginate<T>(rows: T[], page: number): { rows: T[]; meta: BotPage } | No
   const lastPage = Math.max(totalPages, 1);
   if (page > lastPage) return { notFound: `There's no page ${page}. The last page is ${lastPage}.` };
   const start = (page - 1) * BOT_PAGE_SIZE;
+  const pageRows = rows.slice(start, start + BOT_PAGE_SIZE);
   return {
-    rows: rows.slice(start, start + BOT_PAGE_SIZE),
-    meta: { page, pageSize: BOT_PAGE_SIZE, totalRows: rows.length, totalPages },
+    rows: pageRows,
+    meta: {
+      page,
+      pageSize: BOT_PAGE_SIZE,
+      totalRows: rows.length,
+      totalPages,
+      showing: pageRows.length,
+      prevPage: page > 1 ? page - 1 : null,
+      nextPage: page < totalPages ? page + 1 : null,
+      footer: `Showing ${pageRows.length} of ${rows.length} participants · Page ${page} of ${lastPage}`,
+    },
   };
 }
 

@@ -6,9 +6,9 @@ export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico|cursors/).*)"],
 };
 
-// /api/bot/leaderboard has no session either: the Discord bot sends a bearer
+// /api/bot/leaderboard and /api/bot/events have no session either: the Discord bot sends a bearer
 // key, which the route checks itself (lib/auth/botKey.ts).
-const PUBLIC_PATHS = new Set(["/login", "/api/auth/login", "/api/auth/logout", "/api/bot/leaderboard"]);
+const PUBLIC_PATHS = new Set(["/login", "/api/auth/login", "/api/auth/logout", "/api/bot/leaderboard", "/api/bot/events"]);
 
 // Vercel sets x-real-ip itself. For x-forwarded-for, the first entry is
 // whatever the client sent, so only the last hop (added by our proxy) is used.
