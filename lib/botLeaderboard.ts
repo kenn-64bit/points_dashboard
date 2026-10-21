@@ -42,6 +42,11 @@ interface BotPage {
   prevPage: number | null; // null on the first page
   nextPage: number | null; // null on the last page
   footer: string; // "Showing 10 of 14 participants · Page 1 of 2"
+  // This page's rows as ready-made Discord markdown, one line each, for an
+  // embed description. BotGhost has no loops, so a template naming
+  // leaderboard[0]…[9] prints the raw {…} text for every slot a short or
+  // empty page lacks; this one variable always fills.
+  text: string; // "**#1** Ashe — 166 pts\n**#2** …"
 }
 
 export type BotLeaderboard =
@@ -133,7 +138,7 @@ async function loadWeekStandings(
 
 // The rows on `page`. Page 1 always exists, so an event or week with no
 // points yet gets an empty board rather than a 404.
-function paginate<T>(rows: T[], page: number): { rows: T[]; meta: BotPage } | NotFound {
+function paginate(rows: LeaderboardRow[], page: number): { rows: LeaderboardRow[]; meta: BotPage } | NotFound {
   const totalPages = Math.ceil(rows.length / BOT_PAGE_SIZE);
   const lastPage = Math.max(totalPages, 1);
   if (page > lastPage) return { notFound: `There's no page ${page}. The last page is ${lastPage}.` };
@@ -150,8 +155,22 @@ function paginate<T>(rows: T[], page: number): { rows: T[]; meta: BotPage } | No
       prevPage: page > 1 ? page - 1 : null,
       nextPage: page < totalPages ? page + 1 : null,
       footer: `Showing ${pageRows.length} of ${rows.length} participants · Page ${page} of ${lastPage}`,
+      text: boardText(pageRows),
     },
   };
+}
+
+// Backslash-escapes Discord markdown, so a name like whispering_bubbles
+// isn't read as italics.
+function escapeMarkdown(text: string): string {
+  return text.replace(/[\\*_~`|>]/g, "\\$&");
+}
+
+function boardText(rows: LeaderboardRow[]): string {
+  if (rows.length === 0) return "No points yet.";
+  return rows
+    .map((row) => `**#${row.rank}** ${escapeMarkdown(row.discord_username)} — ${row.total_points} pts`)
+    .join("\n");
 }
 
 function toEntry(row: LeaderboardRow): BotLeaderboardEntry {
